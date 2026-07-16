@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTERSTOCKCHART - HEATMAPS</title>
+    <!-- นำเข้า Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- นำเข้า Google Fonts (Inter & Sarabun สำหรับภาษาไทยที่อ่านง่าย) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: #030d1a;
+        }
+        /* สร้างเอฟเฟกต์เรืองแสง (Glow) สำหรับหัวข้อและไอคอน */
+        .glow-text {
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 
+                         0 0 30px rgba(59, 130, 246, 0.4);
+        }
+        .glow-green {
+            text-shadow: 0 0 15px rgba(34, 197, 94, 0.8), 
+                         0 0 30px rgba(34, 197, 94, 0.4);
+        }
+        .glow-red {
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.8), 
+                         0 0 30px rgba(239, 68, 68, 0.4);
+        }
+        .glow-pill {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        /* รูปภาพพื้นหลังเบลอๆ ซ้อนหลัง */
+        .bg-overlay {
+            background: radial-gradient(circle at center, rgba(15, 32, 67, 0.6) 0%, rgba(3, 13, 26, 0.95) 100%);
+        }
+    </style>
+</head>
+<body class="relative min-h-screen text-white overflow-hidden flex flex-col justify-between">
+
+    <!-- เอฟเฟกต์พื้นหลังและแสงเรืองสีน้ำเงิน (ห่อด้วย fixed เพื่อตัดส่วนเกินที่ทำให้เกิดช่องว่างด้านล่าง) -->
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute inset-0 bg-overlay"></div>
+        <!-- แสงเรืองวงกลมด้านหลัง (Decorative Background Glows) -->
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/30 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[150px]"></div>
+    </div>
+
+    <!-- ส่วนหัวเว็บไซต์ (Navigation Bar) -->
+    <header class="relative z-10 w-full px-6 py-6 md:px-12 flex justify-between items-center max-w-7xl mx-auto">
+        <!-- โลโก้ด้านซ้าย -->
+        <button onclick="navigateTo('home')" class="flex flex-col items-start focus:outline-none">
+            <span class="text-xl md:text-2xl font-extrabold tracking-wider text-white">
+                INTERS<span class="text-blue-400">.com</span>
+            </span>
+            <div class="w-16 h-[2px] bg-blue-500 mt-1"></div>
+        </button>
+
+        <!-- เมนูด้านขวา -->
+        <nav class="flex space-x-6 md:space-x-10 text-sm md:text-base font-medium text-gray-300">
+            <button onclick="navigateTo('home')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Home</button>
+            <button onclick="navigateTo('about')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">About</button>
+            <button onclick="navigateTo('register')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Register</button>
+        </nav>
+    </header>
+
+    <!-- พื้นที่แสดงผลหลัก (Dynamic Content Switcher) -->
+    <main class="relative z-10 flex-grow flex flex-col items-center justify-center w-full">
+        
+        <!-- ================= หน้าที่ 1: HOME PAGE (โฮมเพจดีไซน์ดั้งเดิม) ================= -->
+        <div id="view-home" class="flex flex-col items-center justify-center px-4 py-12 text-center max-w-5xl mx-auto w-full transition-all duration-300">
+            
+            <!-- ป้ายข้อความบอกรักอนาคต (Sub-badge) -->
+            <div class="mb-6 px-6 py-1.5 bg-blue-950/80 border border-blue-500/30 rounded-full text-xs md:text-sm font-semibold tracking-[0.2em] text-blue-300 uppercase glow-pill">
+                Good Investment For The Future
+            </div>
+
+            <!-- หัวข้อใหญ่ (Main Heading with Arrows) -->
+            <div class="flex flex-wrap items-center justify-center gap-3 md:gap-5 mb-8">
+                <!-- ลูกศรขึ้นสีเขียว -->
+                <span class="text-green-500 text-5xl md:text-7xl font-black select-none animate-bounce glow-green">↑</span>
+                
+                <!-- ชื่อแบรนด์หลัก -->
+                <h1 class="text-5xl md:text-8xl font-black tracking-tighter text-white glow-text leading-none uppercase">
+                    INTERSTOCKCHART
+                </h1>
+                
+                <!-- ลูกศรลงสีแดง -->
+                <span class="text-red-500 text-5xl md:text-7xl font-black select-none animate-bounce glow-red">↓</span>
+            </div>
+
+            <!-- ปุ่มคำว่า HEATMAPS -->
+            <button onclick="navigateTo('heatmaps')" class="relative group focus:outline-none">
+                <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
+                <div class="relative px-12 py-3 bg-gradient-to-r from-blue-900/90 to-blue-950/90 border border-cyan-500/50 rounded-full transition duration-300 group-hover:border-cyan-400">
+                    <span class="text-2xl md:text-4xl font-extrabold tracking-widest text-white glow-text uppercase">
+                        HEATMAPS
+                    </span>
+                </div>
+            </button>
+        </div>
+
+
+        <!-- ================= หน้าที่ 2: ABOUT US PAGE (หน้าเกี่ยวกับเราที่ออกแบบใหม่) ================= -->
+        <div id="view-about" class="hidden flex-col items-center justify-center px-6 py-12 max-w-5xl mx-auto w-full transition-all duration-300">
+            
+            <!-- ส่วนหัวข้อหลักหน้า About -->
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-950 border border-blue-500/30 rounded-full text-xs font-semibold tracking-widest text-blue-400 uppercase mb-4">
+                    <span class="w-2 h-2 bg-blue-400 rounded-full animate-ping"></span>
+                    Who We Are
+                </div>
+                <h2 class="text-4xl md:text-6xl font-black tracking-tight text-white mb-3 glow-text uppercase">
+                    ABOUT INTERSTOCKCHART
+                </h2>
+                <p class="text-sm md:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
+                    ขับเคลื่อนการวิเคราะห์และนำเสนอข้อมูลเชิงทัศนภาพสำหรับตลาดการลงทุนยุคใหม่
+                </p>
+            </div>
+
+            <!-- Grid 1: ที่มาและภาพรวม (Our Origin) -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 w-full mb-12 items-center">
+                <!-- ฝั่งเนื้อหาข้อความ (ผู้ใช้สามารถแก้ไขรายละเอียดตรงนี้ได้เลย) -->
+                <div class="md:col-span-7 space-y-4 text-gray-300 text-sm md:text-base leading-relaxed">
+                    <h3 class="text-xl md:text-2xl font-bold text-blue-400 border-l-4 border-blue-500 pl-3">
+                        ที่มาและแรงบันดาลใจของเรา
+                    </h3>
+                    <p>
+                        [ใส่เนื้อหาเกี่ยวกับความเป็นมาของโปรเจกต์หรือไอเดียเริ่มต้นของคุณได้ตรงนี้] ยกตัวอย่างเช่น: INTERSTOCKCHART เริ่มต้นจากความต้องการที่จะทำให้นักลงทุนทั่วไปเข้าถึงและเข้าใจข้อมูลสภาวะตลาดที่มีความซับซ้อนได้อย่างง่ายดายผ่านแผนภูมิความร้อน (Heatmaps) 
+                    </p>
+                    <p>
+                        เราเชื่อว่าข้อมูลที่ดีและนำเสนอได้อย่างถูกวิธี จะช่วยลดความผิดพลาดและเพิ่มโอกาสสำเร็จในการบริหารพอร์ตการลงทุนให้กับผู้คนในอนาคตได้อย่างมีประสิทธิภาพสูงสุด
+                    </p>
+                </div>
+                
+                <!-- ฝั่งกล่องกราฟิกตกแต่งด้านขวาเพื่อเพิ่มความสวยงามล้ำสมัย -->
+                <div class="md:col-span-5 w-full h-48 bg-gradient-to-br from-blue-950/80 to-slate-950/90 border border-blue-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-blue-500/10 blur-xl"></div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-blue-400 tracking-widest uppercase">System Status</span>
+                        <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black tracking-tighter text-white glow-text mb-1">99.9%</div>
+                        <p class="text-[11px] text-gray-400 uppercase tracking-widest">Data Visualization Accuracy</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid 2: วิสัยทัศน์และพันธกิจ (Vision & Mission) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-12">
+                <!-- การ์ดวิสัยทัศน์ -->
+                <div class="bg-blue-950/30 border border-blue-500/10 hover:border-blue-500/30 transition-all p-6 rounded-2xl">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-2">วิสัยทัศน์ (Our Vision)</h4>
+                    <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
+                        [ใส่ข้อความวิสัยทัศน์ของคุณตรงนี้] เพื่อเป็นศูนย์กลางการแสดงผลแผนภูมิหุ้นและความร้อนตลาด (Heatmap Data Visualization) ที่ง่ายและตอบโจทย์การตัดสินใจที่ดีที่สุดของผู้ใช้งาน
+                    </p>
+                </div>
+
+                <!-- การ์ดพันธกิจ -->
+                <div class="bg-blue-950/30 border border-blue-500/10 hover:border-blue-500/30 transition-all p-6 rounded-2xl">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-2">พันธกิจ (Our Mission)</h4>
+                    <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
+                        [ใส่ข้อความพันธกิจของคุณตรงนี้] พัฒนาออกแบบเทคโนโลยีและสถาปัตยกรรมข้อมูลให้เข้าใจง่าย รวดเร็ว และเป็นประโยชน์ต่อทัศนะคติตลาดการเงิน
+                    </p>
+                </div>
+            </div>
+
+            <!-- ส่วนหัวข้อคุณค่าหลัก -->
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold text-white uppercase tracking-wider">
+                    Core Values
+                </h3>
+                <div class="w-12 h-[2px] bg-blue-500 mx-auto mt-2"></div>
+            </div>
+
+            <!-- Grid 3: คุณค่าหลัก 3 ข้อ (Core Values Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-12">
+                <!-- คอลัมน์ที่ 1 -->
+                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
+                    <div class="text-blue-400 font-black text-xl mb-2">01</div>
+                    <h5 class="font-bold text-white mb-1.5">Real-time Data</h5>
+                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขรายละเอียดการเชื่อมต่อข้อมูลตรงนี้ตามใจชอบ]</p>
+                </div>
+                <!-- คอลัมน์ที่ 2 -->
+                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
+                    <div class="text-blue-400 font-black text-xl mb-2">02</div>
+                    <h5 class="font-bold text-white mb-1.5">Visual Heatmap</h5>
+                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขคำอธิบายสไตล์การออกแบบแผนผังความร้อนที่นี่]</p>
+                </div>
+                <!-- คอลัมน์ที่ 3 -->
+                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
+                    <div class="text-blue-400 font-black text-xl mb-2">03</div>
+                    <h5 class="font-bold text-white mb-1.5">Global Standard</h5>
+                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขระบุข้อความเกี่ยวกับมาตรฐานข้อมูลของระบบได้เลย]</p>
+                </div>
+            </div>
+
+            <!-- ปุ่มกดกลับหน้าแรก -->
+            <button onclick="navigateTo('home')" class="px-6 py-2.5 bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 rounded-xl text-sm font-semibold tracking-wide text-white transition duration-300 shadow-lg shadow-blue-500/20">
+                ← กลับสู่หน้าหลัก
+            </button>
+        </div>
+
+
+        <!-- ================= หน้าที่ 3: BLANK PAGE PLACEHOLDER (หน้าว่างอื่นๆ สำหรับอนาคต) ================= -->
+        <div id="view-blank" class="hidden flex-col items-center justify-center px-6 py-16 text-center max-w-3xl mx-auto w-full transition-all duration-300">
+            
+            <!-- ไอคอนตกแต่งหน้าว่างเพื่อให้ดูโมเดิร์น -->
+            <div class="w-20 h-20 rounded-2xl bg-blue-950/50 border border-blue-500/20 flex items-center justify-center mb-6 shadow-xl">
+                <svg class="w-10 h-10 text-blue-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+            </div>
+
+            <!-- หัวข้อที่จะเปลี่ยนชื่อตามปุ่มที่ถูกกด -->
+            <h2 id="blank-title" class="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-4 uppercase">
+                Blank Page
+            </h2>
+
+            <p class="text-sm md:text-base text-gray-400 max-w-md leading-relaxed mb-8">
+                หน้านี้เป็นหน้าว่างที่เตรียมไว้สำหรับแก้ไขหรือใส่ฟีเจอร์ใหม่ๆ เพิ่มเติมในอนาคต คุณสามารถเริ่มเขียนเนื้อหาเว็บเพจของคุณได้ตรงนี้ทันที
+            </p>
+
+            <!-- ปุ่มกดกลับหน้าแรก -->
+            <button onclick="navigateTo('home')" class="px-6 py-2.5 bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 rounded-xl text-sm font-semibold tracking-wide text-white transition duration-300 shadow-lg shadow-blue-500/20">
+                ← กลับสู่หน้าหลัก
+            </button>
+        </div>
+
+    </main>
+
+    <!-- ส่วนท้ายเว็บ (Footer / Disclaimers & Credits) -->
+    <footer class="relative z-10 w-full px-6 py-8 text-center max-w-4xl mx-auto flex flex-col items-center gap-4">
+        <!-- เส้นตกแต่งพื้นหลังด้านซ้าย-ขวา -->
+        <div class="flex items-center justify-center gap-4">
+            <div class="h-[1px] w-12 bg-blue-500/40"></div>
+            <p class="text-sm md:text-base font-bold tracking-[0.2em] text-red-400 uppercase">
+                The Risk is Yours
+            </p>
+            <div class="h-[1px] w-12 bg-blue-500/40"></div>
+        </div>
+        
+        <p class="text-[10px] md:text-xs tracking-[0.15em] text-gray-500 uppercase leading-relaxed max-w-md mx-auto">
+            We are not responsible for any of your lost
+        </p>
+
+        <!-- ส่วนแสดงข้อมูลผู้สร้าง -->
+        <div class="mt-4 pt-4 border-t border-blue-950/80 w-full max-w-xs text-xs tracking-wide text-gray-400">
+            <p class="font-bold text-blue-400/80 mb-1.5 text-[11px] uppercase tracking-widest">สร้าง และ พัฒนาโดย</p>
+            <p class="leading-relaxed">นาย กตาธิการ เสตะจันทน์ เลขที่ 1 ม.5/2</p>
+            <p class="leading-relaxed">นาย ภูษณสิทธิ์ รัตนกุล เลขที่ 21 ม.5/2</p>
+        </div>
+    </footer>
+
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        /**
+         * ฟังก์ชันนำทาง (Simple Page Router)
+         * ทำหน้าที่สลับหน้าจอ และอัปเดตชื่อหน้าว่างให้สัมพันธ์กับปุ่มที่คลิก
+         */
+        function navigateTo(targetPage) {
+            const homeView = document.getElementById('view-home');
+            const aboutView = document.getElementById('view-about');
+            const blankView = document.getElementById('view-blank');
+        const blankTitle = document.getElementById('blank-title');
+
+        if (targetPage === 'home') {
+            // ป้องกันการเลื่อนหน้าจอและตัดพื้นที่ว่างด้านล่างเฉพาะหน้าแรก
+            document.body.classList.add('overflow-hidden');
+            document.body.classList.remove('overflow-x-hidden');
+
+            // แสดงหน้า Home ซ่อนหน้าอื่นๆ ทั้งหมด
+            homeView.classList.remove('hidden');
+            homeView.classList.add('flex');
+                aboutView.classList.remove('flex');
+                aboutView.classList.add('hidden');
+            blankView.classList.remove('flex');
+            blankView.classList.add('hidden');
+        } else if (targetPage === 'about') {
+            // ปลดล็อกให้หน้าอื่นๆ สามารถเลื่อนขึ้นลงได้ตามปกติ
+            document.body.classList.remove('overflow-hidden');
+            document.body.classList.add('overflow-x-hidden');
+
+            // แสดงหน้า About โดยเฉพาะ
+            homeView.classList.remove('flex');
+            homeView.classList.add('hidden');
+                aboutView.classList.remove('hidden');
+                aboutView.classList.add('flex');
+            blankView.classList.remove('flex');
+            blankView.classList.add('hidden');
+        } else {
+            // ปลดล็อกให้หน้าอื่นๆ สามารถเลื่อนขึ้นลงได้ตามปกติ
+            document.body.classList.remove('overflow-hidden');
+            document.body.classList.add('overflow-x-hidden');
+
+            // แสดงหน้า Blank สำหรับ Register หรืออื่นๆ
+            homeView.classList.remove('flex');
+            homeView.classList.add('hidden');
+                aboutView.classList.remove('flex');
+                aboutView.classList.add('hidden');
+                blankView.classList.remove('hidden');
+                blankView.classList.add('flex');
+
+                // เปลี่ยนชื่อหัวข้อตามปุ่มที่เลือกในหน้า Blank ทั่วไป
+                if (targetPage === 'register') {
+                    blankTitle.innerText = "Register";
+                } else if (targetPage === 'heatmaps') {
+                    blankTitle.innerText = "Heatmaps Center";
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>
