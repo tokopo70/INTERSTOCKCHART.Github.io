@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTERSTOCKCHART - HEATMAPS</title>
+    <title>INTERSTOCKCHART - Heatmaps</title>
     <!-- นำเข้า Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- นำเข้า Google Fonts (Inter & Sarabun สำหรับภาษาไทยที่อ่านง่าย) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- นำเข้า Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
         body {
-            font-family: 'Inter', 'Sarabun', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: #030d1a;
+            color: #f3f4f6;
         }
-        /* สร้างเอฟเฟกต์เรืองแสง (Glow) สำหรับหัวข้อและไอคอน */
+        /* เอฟเฟกต์เรืองแสง (Glow effects) */
         .glow-text {
             text-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 
                          0 0 30px rgba(59, 130, 246, 0.4);
@@ -29,215 +31,596 @@
         .glow-pill {
             box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
         }
-        /* รูปภาพพื้นหลังเบลอๆ ซ้อนหลัง */
+        .glow-card {
+            box-shadow: 0 0 35px rgba(59, 130, 246, 0.15),
+                        inset 0 0 15px rgba(59, 130, 246, 0.05);
+        }
         .bg-overlay {
             background: radial-gradient(circle at center, rgba(15, 32, 67, 0.6) 0%, rgba(3, 13, 26, 0.95) 100%);
         }
+        
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #06152a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e3a8a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+
+        /* Calendar Picker dark style */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.7;
+            cursor: pointer;
+        }
+
+        /* Heatmap Tile Animation & Hover */
+        .treemap-tile {
+            transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+            box-sizing: border-box;
+            border: 1px solid rgba(15, 23, 42, 0.6);
+        }
+        .treemap-tile:hover {
+            transform: scale(1.02);
+            z-index: 20;
+            filter: brightness(1.25);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            cursor: pointer;
+        }
+
+        /* Stock Color Gradients */
+        .bg-stock-up-extreme { background: linear-gradient(135deg, #057a55 0%, #03543f 100%); color: #ffffff; }
+        .bg-stock-up-mid { background: linear-gradient(135deg, #0e9f6e 0%, #046c4e 100%); color: #ffffff; }
+        .bg-stock-up-light { background: linear-gradient(135deg, #31c48d 0%, #0e9f6e 100%); color: #032b1d; }
+        .bg-stock-neutral { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); color: #e5e7eb; }
+        .bg-stock-down-light { background: linear-gradient(135deg, #f98080 0%, #e02424 100%); color: #3b0707; }
+        .bg-stock-down-mid { background: linear-gradient(135deg, #e02424 0%, #9b1c1c 100%); color: #ffffff; }
+        .bg-stock-down-extreme { background: linear-gradient(135deg, #9b1c1c 0%, #771d1d 100%); color: #ffffff; }
     </style>
 </head>
-<body class="relative min-h-screen text-white overflow-hidden flex flex-col justify-between">
+<body class="relative min-h-screen text-white overflow-x-hidden flex flex-col justify-between bg-[#030d1a]">
 
-    <!-- เอฟเฟกต์พื้นหลังและแสงเรืองสีน้ำเงิน (ห่อด้วย fixed เพื่อตัดส่วนเกินที่ทำให้เกิดช่องว่างด้านล่าง) -->
-    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div class="absolute inset-0 bg-overlay"></div>
-        <!-- แสงเรืองวงกลมด้านหลัง (Decorative Background Glows) -->
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/30 blur-[120px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[150px]"></div>
-    </div>
+    <div class="absolute inset-0 z-0 bg-overlay pointer-events-none"></div>
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/30 blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-900/20 blur-[150px] pointer-events-none"></div>
 
-    <!-- ส่วนหัวเว็บไซต์ (Navigation Bar) -->
-    <header class="relative z-10 w-full px-6 py-6 md:px-12 flex justify-between items-center max-w-7xl mx-auto">
+    <header class="relative z-20 w-full px-4 py-5 md:px-8 flex justify-between items-center max-w-7xl mx-auto border-b border-blue-900/40">
         <!-- โลโก้ด้านซ้าย -->
-        <button onclick="navigateTo('home')" class="flex flex-col items-start focus:outline-none">
-            <span class="text-xl md:text-2xl font-extrabold tracking-wider text-white">
+        <button onclick="navigateTo('home')" class="flex flex-col items-start focus:outline-none group">
+            <span class="text-xl md:text-2xl font-extrabold tracking-wider text-white group-hover:text-blue-300 transition-colors">
                 INTERS<span class="text-blue-400">.com</span>
             </span>
-            <div class="w-16 h-[2px] bg-blue-500 mt-1"></div>
+            <div class="w-16 h-[2px] bg-blue-500 mt-1 transition-all group-hover:w-24"></div>
         </button>
 
         <!-- เมนูด้านขวา -->
-        <nav class="flex space-x-6 md:space-x-10 text-sm md:text-base font-medium text-gray-300">
-            <button onclick="navigateTo('home')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Home</button>
-            <button onclick="navigateTo('about')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">About</button>
-            <button onclick="navigateTo('register')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Register</button>
+        <nav class="flex space-x-4 md:space-x-8 text-xs md:text-sm font-medium text-gray-300">
+            <button id="nav-home" onclick="navigateTo('home')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none text-blue-400 border-b-2 border-blue-400 pb-1">Home</button>
+            <button id="nav-heatmaps" onclick="navigateTo('heatmaps')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Heatmaps</button>
+            <button id="nav-about" onclick="navigateTo('about')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">About</button>
+            <button id="nav-register" onclick="navigateTo('register')" class="hover:text-blue-400 transition-colors duration-300 focus:outline-none">Register</button>
         </nav>
     </header>
 
-    <!-- พื้นที่แสดงผลหลัก (Dynamic Content Switcher) -->
-    <main class="relative z-10 flex-grow flex flex-col items-center justify-center w-full">
+    <main class="relative z-10 flex-grow flex flex-col items-center justify-start w-full my-4 px-2 md:px-6">
         
-        <!-- ================= หน้าที่ 1: HOME PAGE (โฮมเพจดีไซน์ดั้งเดิม) ================= -->
+        <!-- ================= หน้าที่ 1: HOME PAGE ================= -->
         <div id="view-home" class="flex flex-col items-center justify-center px-4 py-12 text-center max-w-5xl mx-auto w-full transition-all duration-300">
             
-            <!-- ป้ายข้อความบอกรักอนาคต (Sub-badge) -->
             <div class="mb-6 px-6 py-1.5 bg-blue-950/80 border border-blue-500/30 rounded-full text-xs md:text-sm font-semibold tracking-[0.2em] text-blue-300 uppercase glow-pill">
                 Good Investment For The Future
             </div>
 
-            <!-- หัวข้อใหญ่ (Main Heading with Arrows) -->
             <div class="flex flex-wrap items-center justify-center gap-3 md:gap-5 mb-8">
-                <!-- ลูกศรขึ้นสีเขียว -->
                 <span class="text-green-500 text-5xl md:text-7xl font-black select-none animate-bounce glow-green">↑</span>
-                
-                <!-- ชื่อแบรนด์หลัก -->
                 <h1 class="text-5xl md:text-8xl font-black tracking-tighter text-white glow-text leading-none uppercase">
                     INTERSTOCKCHART
                 </h1>
-                
-                <!-- ลูกศรลงสีแดง -->
                 <span class="text-red-500 text-5xl md:text-7xl font-black select-none animate-bounce glow-red">↓</span>
             </div>
 
-            <!-- ปุ่มคำว่า HEATMAPS -->
             <button onclick="navigateTo('heatmaps')" class="relative group focus:outline-none">
                 <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
-                <div class="relative px-12 py-3 bg-gradient-to-r from-blue-900/90 to-blue-950/90 border border-cyan-500/50 rounded-full transition duration-300 group-hover:border-cyan-400">
-                    <span class="text-2xl md:text-4xl font-extrabold tracking-widest text-white glow-text uppercase">
-                        HEATMAPS
+                <div class="relative px-12 py-3.5 bg-gradient-to-r from-blue-900/90 to-blue-950/90 border border-cyan-500/50 rounded-full transition duration-300 group-hover:border-cyan-400 flex items-center gap-3">
+                    <span class="text-2xl md:text-3xl font-extrabold tracking-widest text-white glow-text uppercase">
+                        OPEN HEATMAPS
                     </span>
+                    <svg class="w-6 h-6 text-cyan-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
                 </div>
             </button>
         </div>
 
-
-        <!-- ================= หน้าที่ 2: ABOUT US PAGE (หน้าเกี่ยวกับเราที่ออกแบบใหม่) ================= -->
-        <div id="view-about" class="hidden flex-col items-center justify-center px-6 py-12 max-w-5xl mx-auto w-full transition-all duration-300">
+        <!-- ================= หน้าที่ 2: STOCK HEATMAPS PAGE ================= -->
+        <div id="view-heatmaps" class="hidden flex-col w-full max-w-7xl mx-auto transition-all duration-300 space-y-4">
             
-            <!-- ส่วนหัวข้อหลักหน้า About -->
-            <div class="text-center mb-12">
-                <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-950 border border-blue-500/30 rounded-full text-xs font-semibold tracking-widest text-blue-400 uppercase mb-4">
-                    <span class="w-2 h-2 bg-blue-400 rounded-full animate-ping"></span>
-                    Who We Are
+            <!-- Header Bar & Filter Controls -->
+            <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 md:p-5 backdrop-blur-md glow-card flex flex-col gap-4">
+                
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-blue-900/50 pb-4">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-cyan-950 border border-cyan-500/40 text-cyan-400 rounded-full text-xs font-extrabold tracking-wider uppercase">
+                                CompaniesMarketCap Top 100
+                            </span>
+                            <span class="text-xs text-gray-400 flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Market Cap Weighting
+                            </span>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-black text-white mt-1 tracking-tight flex items-center gap-2">
+                            Global Stock Market Heatmap
+                        </h2>
+                    </div>
+
+                    <!-- Metrics Summary Badges -->
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <div class="bg-blue-950/80 border border-blue-500/30 px-3 py-2 rounded-xl flex flex-col">
+                            <span class="text-gray-400 text-[10px]">TOTAL MARKET CAP</span>
+                            <span class="text-cyan-300 font-bold font-mono">$68.42 Trillion</span>
+                        </div>
+                        <div class="bg-blue-950/80 border border-blue-500/30 px-3 py-2 rounded-xl flex flex-col">
+                            <span class="text-gray-400 text-[10px]">TOP SECTOR</span>
+                            <span class="text-blue-400 font-bold">Technology (38.5%)</span>
+                        </div>
+                        <div class="bg-blue-950/80 border border-blue-500/30 px-3 py-2 rounded-xl flex flex-col">
+                            <span class="text-gray-400 text-[10px]">TOP NATION</span>
+                            <span class="text-emerald-400 font-bold">United States (69%)</span>
+                        </div>
+                    </div>
                 </div>
-                <h2 class="text-4xl md:text-6xl font-black tracking-tight text-white mb-3 glow-text uppercase">
-                    ABOUT INTERSTOCKCHART
+
+                <!-- Filter Controls Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="searchInput" oninput="handleFilterChange()" placeholder="Search Ticker / Company..."
+                            class="w-full px-3.5 py-2 bg-blue-950/60 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                        <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+
+                    <!-- Sector Filter (11 Categories) -->
+                    <div>
+                        <select id="sectorFilter" onchange="handleFilterChange()" class="w-full px-3 py-2 bg-blue-950/60 border border-blue-500/30 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400">
+                            <option value="ALL">All 11 Sectors</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Communication Services">Communication Services</option>
+                            <option value="Consumer Cyclical">Consumer Cyclical</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Financial">Financial</option>
+                            <option value="Industrials">Industrials</option>
+                            <option value="Energy">Energy</option>
+                            <option value="Consumer Defensive">Consumer Defensive</option>
+                            <option value="Basic Materials">Basic Materials</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Real Estate">Real Estate</option>
+                        </select>
+                    </div>
+
+                    <!-- Region Filter -->
+                    <div>
+                        <select id="regionFilter" onchange="handleFilterChange()" class="w-full px-3 py-2 bg-blue-950/60 border border-blue-500/30 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400">
+                            <option value="ALL">All Nations</option>
+                            <option value="US">🇺🇸 United States</option>
+                            <option value="Asia">🌏 Asia & Middle East</option>
+                            <option value="Europe">🇪🇺 Europe</option>
+                            <option value="Americas">🌎 Americas (Ex-US)</option>
+                        </select>
+                    </div>
+
+                    <!-- Timeframe Performance Switch -->
+                    <div>
+                        <select id="timeframeFilter" onchange="handleFilterChange()" class="w-full px-3 py-2 bg-blue-950/60 border border-blue-500/30 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400">
+                            <option value="1D">Performance: 1-Day (24h)</option>
+                            <option value="1W">Performance: 1-Week</option>
+                            <option value="1M">Performance: 1-Month</option>
+                            <option value="YTD">Performance: Year-To-Date</option>
+                        </select>
+                    </div>
+
+                    <!-- Color Mode / Reset Button -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetHeatmapFilters()" class="w-full py-2 bg-blue-900/60 hover:bg-blue-800 border border-blue-500/30 rounded-xl text-xs font-semibold text-gray-300 transition-colors flex items-center justify-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Reset View
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Color Legend Bar -->
+                <div class="flex flex-wrap items-center justify-between text-[11px] text-gray-400 pt-2 border-t border-blue-900/40">
+                    <span class="font-medium">Performance Color Scale:</span>
+                    <div class="flex items-center gap-1 sm:gap-2">
+                        <span class="px-2 py-0.5 rounded bg-stock-down-extreme text-white text-[10px] font-mono">-3%+</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-down-mid text-white text-[10px] font-mono">-1% to -3%</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-down-light text-slate-900 text-[10px] font-mono">0% to -1%</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-neutral text-gray-200 text-[10px] font-mono">0% Neutral</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-up-light text-slate-900 text-[10px] font-mono">0% to +1%</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-up-mid text-white text-[10px] font-mono">+1% to +3%</span>
+                        <span class="px-2 py-0.5 rounded bg-stock-up-extreme text-white text-[10px] font-mono">+3%+</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heatmap Treemap Container -->
+            <div class="relative w-full min-h-[620px] md:min-h-[720px] bg-slate-950/80 border border-blue-500/30 rounded-2xl p-2.5 backdrop-blur-md glow-card overflow-hidden">
+                <div id="heatmapContainer" class="relative w-full h-[600px] md:h-[700px] rounded-xl overflow-hidden bg-slate-950">
+                    <!-- Dynamic Treemap tiles rendered via JavaScript -->
+                </div>
+            </div>
+
+            <!-- Footnote / Methodology note -->
+            <div class="text-right text-[11px] text-gray-400 px-2">
+                * Area size corresponds proportionally to total Market Capitalization in USD (Source: <a href="https://companiesmarketcap.com" target="_blank" class="text-blue-400 underline">companiesmarketcap.com</a>).
+            </div>
+
+        </div>
+
+        <!-- ================= หน้าที่ 3: REGISTER PAGE ================= -->
+        <div id="view-register" class="hidden flex-col items-center justify-center px-4 py-6 max-w-2xl mx-auto w-full transition-all duration-300">
+            
+            <div id="register-form-card" class="w-full bg-gradient-to-b from-blue-950/70 to-slate-950/80 border border-blue-500/30 rounded-3xl p-6 md:p-10 backdrop-blur-md glow-card">
+                <div class="text-center mb-8">
+                    <span class="px-4 py-1 bg-blue-900/40 border border-blue-400/30 rounded-full text-xs font-bold tracking-widest text-blue-400 uppercase">
+                        Member Access
+                    </span>
+                    <h2 class="text-3xl md:text-4xl font-black text-white mt-3 glow-text tracking-tight uppercase">
+                        Register System
+                    </h2>
+                    <p class="text-xs md:text-sm text-gray-400 mt-2">
+                        กรอกข้อมูลเพื่อเปิดบัญชีสมาชิกกับ INTERSTOCKCHART
+                    </p>
+                </div>
+
+                <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                                First Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" id="firstName" required placeholder="ชื่อจริง"
+                                class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                                Last Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" id="lastName" required placeholder="นามสกุล"
+                                class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                            Email Address <span class="text-red-400">*</span>
+                        </label>
+                        <input type="email" id="email" required placeholder="example@email.com"
+                            class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                            Password <span class="text-red-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="password" required minlength="6" placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร"
+                                class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all pr-12">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-400 text-xs px-2 py-1 transition-colors">
+                                <span id="togglePassText">แสดง</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                                Age <span class="text-red-400">*</span>
+                            </label>
+                            <input type="number" id="age" required min="1" max="120" placeholder="อายุ (ปี)"
+                                class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                                Birthdate <span class="text-red-400">*</span>
+                            </label>
+                            <input type="date" id="birthdate" required
+                                class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-blue-300 mb-1.5">
+                            Phone Number <span class="text-red-400">*</span>
+                        </label>
+                        <input type="tel" id="phoneNumber" required placeholder="0812345678" pattern="[0-9]{9,10}" title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 9-10 หลัก"
+                            class="w-full px-4 py-3 bg-blue-950/40 border border-blue-500/30 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all">
+                    </div>
+
+                    <div class="pt-2 flex items-start gap-2.5">
+                        <input type="checkbox" id="terms" required class="mt-1 w-4 h-4 rounded bg-blue-950 border-blue-500/50 text-blue-600 focus:ring-cyan-500 focus:ring-offset-gray-900">
+                        <label for="terms" class="text-xs text-gray-400 leading-relaxed cursor-pointer select-none">
+                            ฉันยอมรับ <span class="text-blue-300 underline">เงื่อนไขการใช้บริการ</span> และรับทราบข้อตกลงเกี่ยวกับความเสี่ยงในการลงทุน (The Risk is Yours)
+                        </label>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-base tracking-wider rounded-xl shadow-lg shadow-blue-500/30 transition duration-300 transform active:scale-[0.98] uppercase">
+                            Submit Registration
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Success Card -->
+            <div id="register-success-card" class="hidden w-full bg-gradient-to-b from-blue-950/90 to-slate-950/90 border border-emerald-500/40 rounded-3xl p-6 md:p-10 backdrop-blur-md glow-card text-center">
+                <div class="w-16 h-16 bg-emerald-500/20 border border-emerald-400/50 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-400 text-3xl">✓</div>
+                <span class="px-4 py-1 bg-emerald-950/60 border border-emerald-500/40 rounded-full text-xs font-bold tracking-widest text-emerald-400 uppercase">
+                    Registration Successful
+                </span>
+                <h3 class="text-2xl md:text-3xl font-extrabold text-white mt-3 uppercase">INTERSTOCK MEMBER CARD</h3>
+                <p class="text-xs text-gray-400 mt-1 mb-6">ต้อนรับคุณเข้าสู่ระบบสมาชิกอย่างเป็นทางการ</p>
+
+                <div class="bg-blue-950/50 border border-blue-500/30 rounded-2xl p-5 text-left space-y-3 mb-6 text-xs md:text-sm">
+                    <div class="flex justify-between border-b border-blue-900/50 pb-2"><span class="text-gray-400">Member ID:</span><span id="resMemberId" class="font-mono font-bold text-cyan-400">#ISC-00000</span></div>
+                    <div class="flex justify-between border-b border-blue-900/50 pb-2"><span class="text-gray-400">Full Name:</span><span id="resFullName" class="font-semibold text-white">-</span></div>
+                    <div class="flex justify-between border-b border-blue-900/50 pb-2"><span class="text-gray-400">Email:</span><span id="resEmail" class="text-blue-300">-</span></div>
+                    <div class="flex justify-between border-b border-blue-900/50 pb-2"><span class="text-gray-400">Phone Number:</span><span id="resPhone" class="text-gray-200">-</span></div>
+                    <div class="flex justify-between border-b border-blue-900/50 pb-2"><span class="text-gray-400">Age / Birthdate:</span><span id="resAgeBirth" class="text-gray-200">-</span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">Status:</span><span class="text-emerald-400 font-bold uppercase tracking-wider">● ACTIVE MEMBER</span></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onclick="navigateTo('heatmaps')" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 rounded-xl text-sm font-bold text-white shadow-lg transition duration-300">
+                        ไปยังแผนภูมิ Heatmaps →
+                    </button>
+                    <button onclick="resetRegisterForm()" class="px-6 py-2.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-500/30 rounded-xl text-sm font-semibold text-gray-300 transition duration-300">
+                        ลงทะเบียนบัญชีอื่น
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= หน้าที่ 4: ABOUT PAGE ================= -->
+        <div id="view-about" class="hidden flex-col items-center justify-start px-4 py-8 max-w-6xl mx-auto w-full transition-all duration-300 space-y-8">
+            
+            <!-- Hero Header -->
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    About The Platform
+                </div>
+                <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight uppercase glow-text">
+                    INTERSTOCK<span class="text-blue-400">CHART</span>
                 </h2>
-                <p class="text-sm md:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
-                    ขับเคลื่อนการวิเคราะห์และนำเสนอข้อมูลเชิงทัศนภาพสำหรับตลาดการลงทุนยุคใหม่
+                <p class="text-sm md:text-base text-gray-300 leading-relaxed">
+                    ยกระดับการวิเคราะห์ตลาดทุนโลกด้วยระบบแผนภูมิความร้อน (Market Heatmap) ที่แสดงผลภาพรวมมูลค่าหลักทรัพย์ตามราคาตลาด (Market Capitalization) ของ 100 บริษัทชั้นนำระดับโลก เข้าถึงข้อมูลแบบเชิงลึก ง่าย และชัดเจนในที่เดียว
                 </p>
             </div>
 
-            <!-- Grid 1: ที่มาและภาพรวม (Our Origin) -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 w-full mb-12 items-center">
-                <!-- ฝั่งเนื้อหาข้อความ (ผู้ใช้สามารถแก้ไขรายละเอียดตรงนี้ได้เลย) -->
-                <div class="md:col-span-7 space-y-4 text-gray-300 text-sm md:text-base leading-relaxed">
-                    <h3 class="text-xl md:text-2xl font-bold text-blue-400 border-l-4 border-blue-500 pl-3">
-                        ที่มาและแรงบันดาลใจของเรา
-                    </h3>
-                    <p>
-                        [ใส่เนื้อหาเกี่ยวกับความเป็นมาของโปรเจกต์หรือไอเดียเริ่มต้นของคุณได้ตรงนี้] ยกตัวอย่างเช่น: INTERSTOCKCHART เริ่มต้นจากความต้องการที่จะทำให้นักลงทุนทั่วไปเข้าถึงและเข้าใจข้อมูลสภาวะตลาดที่มีความซับซ้อนได้อย่างง่ายดายผ่านแผนภูมิความร้อน (Heatmaps) 
-                    </p>
-                    <p>
-                        เราเชื่อว่าข้อมูลที่ดีและนำเสนอได้อย่างถูกวิธี จะช่วยลดความผิดพลาดและเพิ่มโอกาสสำเร็จในการบริหารพอร์ตการลงทุนให้กับผู้คนในอนาคตได้อย่างมีประสิทธิภาพสูงสุด
-                    </p>
+            <!-- Stats Highlight Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 text-center backdrop-blur-md glow-card">
+                    <div class="text-2xl md:text-3xl font-black font-mono text-cyan-300">100</div>
+                    <div class="text-[11px] md:text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Top Mega-Cap Stocks</div>
                 </div>
-                
-                <!-- ฝั่งกล่องกราฟิกตกแต่งด้านขวาเพื่อเพิ่มความสวยงามล้ำสมัย -->
-                <div class="md:col-span-5 w-full h-48 bg-gradient-to-br from-blue-950/80 to-slate-950/90 border border-blue-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden">
-                    <div class="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-blue-500/10 blur-xl"></div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-blue-400 tracking-widest uppercase">System Status</span>
-                        <span class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                    </div>
-                    <div>
-                        <div class="text-3xl font-black tracking-tighter text-white glow-text mb-1">99.9%</div>
-                        <p class="text-[11px] text-gray-400 uppercase tracking-widest">Data Visualization Accuracy</p>
-                    </div>
+                <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 text-center backdrop-blur-md glow-card">
+                    <div class="text-2xl md:text-3xl font-black font-mono text-blue-400">11</div>
+                    <div class="text-[11px] md:text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Global Sectors</div>
+                </div>
+                <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 text-center backdrop-blur-md glow-card">
+                    <div class="text-2xl md:text-3xl font-black font-mono text-emerald-400">$68T+</div>
+                    <div class="text-[11px] md:text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Total Market Cap</div>
+                </div>
+                <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 text-center backdrop-blur-md glow-card">
+                    <div class="text-2xl md:text-3xl font-black font-mono text-indigo-400">Squarified</div>
+                    <div class="text-[11px] md:text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Treemap Engine</div>
                 </div>
             </div>
 
-            <!-- Grid 2: วิสัยทัศน์และพันธกิจ (Vision & Mission) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-12">
-                <!-- การ์ดวิสัยทัศน์ -->
-                <div class="bg-blue-950/30 border border-blue-500/10 hover:border-blue-500/30 transition-all p-6 rounded-2xl">
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                    </div>
-                    <h4 class="text-lg font-bold text-white mb-2">วิสัยทัศน์ (Our Vision)</h4>
-                    <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
-                        [ใส่ข้อความวิสัยทัศน์ของคุณตรงนี้] เพื่อเป็นศูนย์กลางการแสดงผลแผนภูมิหุ้นและความร้อนตลาด (Heatmap Data Visualization) ที่ง่ายและตอบโจทย์การตัดสินใจที่ดีที่สุดของผู้ใช้งาน
-                    </p>
-                </div>
-
-                <!-- การ์ดพันธกิจ -->
-                <div class="bg-blue-950/30 border border-blue-500/10 hover:border-blue-500/30 transition-all p-6 rounded-2xl">
-                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-4">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                    <h4 class="text-lg font-bold text-white mb-2">พันธกิจ (Our Mission)</h4>
-                    <p class="text-xs md:text-sm text-gray-400 leading-relaxed">
-                        [ใส่ข้อความพันธกิจของคุณตรงนี้] พัฒนาออกแบบเทคโนโลยีและสถาปัตยกรรมข้อมูลให้เข้าใจง่าย รวดเร็ว และเป็นประโยชน์ต่อทัศนะคติตลาดการเงิน
-                    </p>
-                </div>
-            </div>
-
-            <!-- ส่วนหัวข้อคุณค่าหลัก -->
-            <div class="text-center mb-8">
-                <h3 class="text-2xl font-bold text-white uppercase tracking-wider">
-                    Core Values
+            <!-- Key Features & Capabilities -->
+            <div class="w-full space-y-4">
+                <h3 class="text-xl md:text-2xl font-bold text-white tracking-wide border-l-4 border-blue-500 pl-3">
+                    จุดเด่นและคุณสมบัติหลักของแพลตฟอร์ม
                 </h3>
-                <div class="w-12 h-[2px] bg-blue-500 mx-auto mt-2"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    
+                    <!-- Feature 1 -->
+                    <div class="bg-gradient-to-b from-blue-950/60 to-slate-950/80 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-md glow-card flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-900/50 border border-blue-400/30 flex items-center justify-center text-cyan-400 text-2xl mb-4">
+                                📊
+                            </div>
+                            <h4 class="text-lg font-bold text-white mb-2">Visual Treemap Heatmap</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                ประมวลผลพื้นที่ของแต่ละหุ้นตามสัดส่วน Market Cap ยิ่งบริษัทมีขนาดใหญ่ พื้นที่ในแผนภูมิจะยิ่งใหญ่ตาม พร้อมสีแสดงผลการเปลี่ยนแปลงของราคาหุ้นอย่างชัดเจน
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-blue-900/50 text-[11px] text-blue-300 font-mono">
+                            ● Interactive Multi-timeframe
+                        </div>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="bg-gradient-to-b from-blue-950/60 to-slate-950/80 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-md glow-card flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-900/50 border border-blue-400/30 flex items-center justify-center text-cyan-400 text-2xl mb-4">
+                                🔍
+                            </div>
+                            <h4 class="text-lg font-bold text-white mb-2">Advanced Filtering & Search</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                ระบบค้นหาชื่อหุ้นหรือชื่อบริษัท พร้อมตัวกรองหมวดหมู่อุตสาหกรรม 11 Sectors และภูมิภาคทั่วโลก (สหรัฐอเมริกา, เอเชีย, ยุโรป) เพื่อค้นหาโอกาสทางการลงทุนได้รวดเร็ว
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-blue-900/50 text-[11px] text-cyan-300 font-mono">
+                            ● Sector & Region Dynamic Filter
+                        </div>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="bg-gradient-to-b from-blue-950/60 to-slate-950/80 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-md glow-card flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-900/50 border border-blue-400/30 flex items-center justify-center text-cyan-400 text-2xl mb-4">
+                                💡
+                            </div>
+                            <h4 class="text-lg font-bold text-white mb-2">Deep Stock Modal Preview</h4>
+                            <p class="text-xs text-gray-300 leading-relaxed">
+                                คลิกที่กล่องหุ้นเพื่อเปิดดูข้อมูลเชิงลึก เช่น ราคาปัจจุบัน, เปอร์เซ็นต์การเปลี่ยนแปลง 1D/1M, ประเทศที่ตั้ง, หมวดหมู่อุตสาหกรรม และแนวโน้มกราฟราคาแบบ SVG
+                            </p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-blue-900/50 text-[11px] text-emerald-300 font-mono">
+                            ● Detailed Analytical Drawer
+                        </div>
+                    </div>
+
+                </div>
             </div>
 
-            <!-- Grid 3: คุณค่าหลัก 3 ข้อ (Core Values Cards) -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full mb-12">
-                <!-- คอลัมน์ที่ 1 -->
-                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
-                    <div class="text-blue-400 font-black text-xl mb-2">01</div>
-                    <h5 class="font-bold text-white mb-1.5">Real-time Data</h5>
-                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขรายละเอียดการเชื่อมต่อข้อมูลตรงนี้ตามใจชอบ]</p>
+            <!-- Methodology & Data Source -->
+            <div class="w-full bg-blue-950/30 border border-blue-500/30 rounded-2xl p-6 backdrop-blur-md glow-card space-y-3">
+                <div class="flex items-center gap-2 text-cyan-400 font-bold text-sm uppercase tracking-wider">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    แหล่งข้อมูลและระเบียบวิธีจัดทำ (Data Methodology)
                 </div>
-                <!-- คอลัมน์ที่ 2 -->
-                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
-                    <div class="text-blue-400 font-black text-xl mb-2">02</div>
-                    <h5 class="font-bold text-white mb-1.5">Visual Heatmap</h5>
-                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขคำอธิบายสไตล์การออกแบบแผนผังความร้อนที่นี่]</p>
-                </div>
-                <!-- คอลัมน์ที่ 3 -->
-                <div class="bg-blue-950/10 border border-blue-900/40 p-5 rounded-xl text-center flex flex-col items-center">
-                    <div class="text-blue-400 font-black text-xl mb-2">03</div>
-                    <h5 class="font-bold text-white mb-1.5">Global Standard</h5>
-                    <p class="text-xs text-gray-400 leading-relaxed">[แก้ไขระบุข้อความเกี่ยวกับมาตรฐานข้อมูลของระบบได้เลย]</p>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    ข้อมูลบริษัททั้งหมด 100 อันดับแรก อ้างอิงจากฐานข้อมูลการจัดอันดับมูลค่าบริษัทระดับโลก <a href="https://companiesmarketcap.com" target="_blank" class="text-cyan-400 underline font-semibold">CompaniesMarketCap.com</a> นำมาคำนวณและประมวลผลด้วยอัลกอริทึม <span class="text-white font-mono font-semibold">Squarified Treemap</span> เพื่อให้อัตราส่วนพื้นที่ของแต่ละกล่องมีความสมดุลและสวยงามที่สุดบนทุกขนาดหน้าจอ
+                </p>
+            </div>
+
+            <!-- Project Developers / Team Section -->
+            <div class="w-full space-y-4">
+                <h3 class="text-xl md:text-2xl font-bold text-white tracking-wide border-l-4 border-cyan-400 pl-3">
+                    คณะผู้จัดทำโครงการ (Project Developers)
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    <div class="bg-gradient-to-r from-blue-950/80 to-slate-900/80 border border-blue-500/40 rounded-2xl p-5 flex items-center gap-4 glow-card">
+                        <div class="w-14 h-14 rounded-full bg-blue-900 border-2 border-cyan-400 flex items-center justify-center font-bold text-xl text-cyan-300 shrink-0">
+                            01
+                        </div>
+                        <div>
+                            <div class="text-xs text-cyan-400 font-semibold uppercase tracking-wider">ผู้พัฒนาหลัก / Developer</div>
+                            <div class="text-base font-extrabold text-white">นาย กตาธิการ เสตะจันทน์</div>
+                            <div class="text-xs text-gray-400 font-mono mt-0.5">เลขที่ 1 ชั้น ม.5/2</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-blue-950/80 to-slate-900/80 border border-blue-500/40 rounded-2xl p-5 flex items-center gap-4 glow-card">
+                        <div class="w-14 h-14 rounded-full bg-blue-900 border-2 border-blue-400 flex items-center justify-center font-bold text-xl text-blue-300 shrink-0">
+                            21
+                        </div>
+                        <div>
+                            <div class="text-xs text-blue-400 font-semibold uppercase tracking-wider">ผู้ร่วมพัฒนา / Co-Developer</div>
+                            <div class="text-base font-extrabold text-white">นาย ภูษณสิทธิ์ รัตนกุล</div>
+                            <div class="text-xs text-gray-400 font-mono mt-0.5">เลขที่ 21 ชั้น ม.5/2</div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- ปุ่มกดกลับหน้าแรก -->
-            <button onclick="navigateTo('home')" class="px-6 py-2.5 bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 rounded-xl text-sm font-semibold tracking-wide text-white transition duration-300 shadow-lg shadow-blue-500/20">
-                ← กลับสู่หน้าหลัก
-            </button>
-        </div>
-
-
-        <!-- ================= หน้าที่ 3: BLANK PAGE PLACEHOLDER (หน้าว่างอื่นๆ สำหรับอนาคต) ================= -->
-        <div id="view-blank" class="hidden flex-col items-center justify-center px-6 py-16 text-center max-w-3xl mx-auto w-full transition-all duration-300">
-            
-            <!-- ไอคอนตกแต่งหน้าว่างเพื่อให้ดูโมเดิร์น -->
-            <div class="w-20 h-20 rounded-2xl bg-blue-950/50 border border-blue-500/20 flex items-center justify-center mb-6 shadow-xl">
-                <svg class="w-10 h-10 text-blue-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-                </svg>
+            <!-- Action Buttons Footer -->
+            <div class="pt-4 flex flex-wrap justify-center gap-4">
+                <button onclick="navigateTo('heatmaps')" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 rounded-xl text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition duration-300 uppercase tracking-wider">
+                    เข้าสู่แผนภูมิ Heatmaps →
+                </button>
+                <button onclick="navigateTo('home')" class="px-6 py-3 bg-blue-950/80 hover:bg-blue-900 border border-blue-500/30 rounded-xl text-sm font-semibold text-gray-300 transition duration-300">
+                    ← กลับหน้าหลัก Home
+                </button>
             </div>
 
-            <!-- หัวข้อที่จะเปลี่ยนชื่อตามปุ่มที่ถูกกด -->
-            <h2 id="blank-title" class="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-4 uppercase">
-                Blank Page
-            </h2>
-
-            <p class="text-sm md:text-base text-gray-400 max-w-md leading-relaxed mb-8">
-                หน้านี้เป็นหน้าว่างที่เตรียมไว้สำหรับแก้ไขหรือใส่ฟีเจอร์ใหม่ๆ เพิ่มเติมในอนาคต คุณสามารถเริ่มเขียนเนื้อหาเว็บเพจของคุณได้ตรงนี้ทันที
-            </p>
-
-            <!-- ปุ่มกดกลับหน้าแรก -->
-            <button onclick="navigateTo('home')" class="px-6 py-2.5 bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 rounded-xl text-sm font-semibold tracking-wide text-white transition duration-300 shadow-lg shadow-blue-500/20">
-                ← กลับสู่หน้าหลัก
-            </button>
         </div>
 
     </main>
 
+    <!-- Modal แสดงรายละเอียดบริษัท (Stock Detail Drawer/Modal) -->
+    <div id="stockModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity">
+        <div class="relative w-full max-w-lg bg-slate-900 border border-blue-500/40 rounded-2xl p-6 shadow-2xl text-white glow-card overflow-hidden">
+            <button onclick="closeStockModal()" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-white rounded-lg transition-colors">
+                ✕
+            </button>
+
+            <div class="flex items-center gap-3 mb-4">
+                <span id="mFlag" class="text-3xl">🇺🇸</span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 id="mTicker" class="text-2xl font-black text-white font-mono">NVDA</h3>
+                        <span id="mRank" class="px-2 py-0.5 bg-blue-950 border border-blue-500/30 text-cyan-300 text-xs rounded font-mono font-bold">#1 Global</span>
+                    </div>
+                    <p id="mName" class="text-sm text-gray-400">NVIDIA Corporation</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 bg-blue-950/50 border border-blue-900/50 p-4 rounded-xl mb-4 text-xs">
+                <div>
+                    <span class="text-gray-400 block mb-0.5">Market Capitalization</span>
+                    <span id="mMarketCap" class="text-base font-bold font-mono text-cyan-300">$5.427 Trillion</span>
+                </div>
+                <div>
+                    <span class="text-gray-400 block mb-0.5">Stock Price</span>
+                    <span id="mPrice" class="text-base font-bold font-mono text-white">$224.09</span>
+                </div>
+                <div>
+                    <span class="text-gray-400 block mb-0.5">24h Change</span>
+                    <span id="mChange1D" class="text-sm font-bold font-mono text-emerald-400">+3.03%</span>
+                </div>
+                <div>
+                    <span class="text-gray-400 block mb-0.5">1-Month Change</span>
+                    <span id="mChange1M" class="text-sm font-bold font-mono text-emerald-400">+8.45%</span>
+                </div>
+                <div>
+                    <span class="text-gray-400 block mb-0.5">Sector Category</span>
+                    <span id="mSector" class="text-xs font-semibold text-blue-300">Technology</span>
+                </div>
+                <div>
+                    <span class="text-gray-400 block mb-0.5">Country / Region</span>
+                    <span id="mCountry" class="text-xs font-semibold text-gray-200">United States</span>
+                </div>
+            </div>
+
+            <!-- SVG Price Trend Line -->
+            <div class="mb-5">
+                <span class="text-xs font-semibold text-gray-400 block mb-2">12-Month Stock Trend Preview</span>
+                <div class="w-full h-20 bg-slate-950 border border-blue-900/40 rounded-xl p-2 flex items-center justify-center">
+                    <svg id="mChartSvg" class="w-full h-full stroke-emerald-400 fill-none" viewBox="0 0 300 60" preserveAspectRatio="none">
+                        <path d="M0,45 Q50,55 100,30 T200,20 T300,5" stroke-width="2.5" />
+                    </svg>
+                </div>
+            </div>
+
+            <button onclick="closeStockModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors uppercase tracking-wider">
+                Close Info
+            </button>
+        </div>
+    </div>
+
+    <!-- Hover Tooltip: แสดงข้อมูลย่อของหุ้นทันทีที่เลื่อนเมาส์ผ่าน (ไม่ต้องคลิก) -->
+    <div id="stockTooltip" class="hidden fixed z-[60] pointer-events-none w-56 bg-slate-900/95 border border-blue-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between gap-2 mb-1">
+            <span id="ttTicker" class="font-black font-mono text-sm text-white">NVDA</span>
+            <span id="ttFlag" class="text-base">🇺🇸</span>
+        </div>
+        <div id="ttName" class="text-[11px] text-gray-400 truncate mb-2">NVIDIA Corporation</div>
+        <div class="flex items-center justify-between text-xs font-mono mb-1">
+            <span id="ttPrice" class="text-white font-semibold">$224.09</span>
+            <span id="ttChange" class="font-bold text-emerald-400">+3.03%</span>
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-gray-500 font-mono pt-1.5 border-t border-blue-900/50">
+            <span id="ttMcap">$5.43T</span>
+            <span id="ttTimeframe">24h Change</span>
+        </div>
+    </div>
+
     <!-- ส่วนท้ายเว็บ (Footer / Disclaimers & Credits) -->
-    <footer class="relative z-10 w-full px-6 py-8 text-center max-w-4xl mx-auto flex flex-col items-center gap-4">
-        <!-- เส้นตกแต่งพื้นหลังด้านซ้าย-ขวา -->
+    <header class="relative z-10 w-full px-6 py-6 text-center max-w-4xl mx-auto flex flex-col items-center gap-4">
         <div class="flex items-center justify-center gap-4">
             <div class="h-[1px] w-12 bg-blue-500/40"></div>
             <p class="text-sm md:text-base font-bold tracking-[0.2em] text-red-400 uppercase">
@@ -250,72 +633,612 @@
             We are not responsible for any of your lost
         </p>
 
-        <!-- ส่วนแสดงข้อมูลผู้สร้าง -->
-        <div class="mt-4 pt-4 border-t border-blue-950/80 w-full max-w-xs text-xs tracking-wide text-gray-400">
-            <p class="font-bold text-blue-400/80 mb-1.5 text-[11px] uppercase tracking-widest">สร้าง และ พัฒนาโดย</p>
+        <div class="mt-2 pt-3 border-t border-blue-950/80 w-full max-w-xs text-xs tracking-wide text-gray-400">
+            <p class="font-bold text-blue-400/80 mb-1 text-[11px] uppercase tracking-widest">สร้าง และ พัฒนาโดย</p>
             <p class="leading-relaxed">นาย กตาธิการ เสตะจันทน์ เลขที่ 1 ม.5/2</p>
             <p class="leading-relaxed">นาย ภูษณสิทธิ์ รัตนกุล เลขที่ 21 ม.5/2</p>
         </div>
-    </footer>
+    </header>
 
-
-    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <!-- ================= JAVASCRIPT ENGINE & TREEMAP ALGORITHM ================= -->
     <script>
-        /**
-         * ฟังก์ชันนำทาง (Simple Page Router)
-         * ทำหน้าที่สลับหน้าจอ และอัปเดตชื่อหน้าว่างให้สัมพันธ์กับปุ่มที่คลิก
-         */
+        // Top 100 Global Companies Dataset from CompaniesMarketCap categorized into 11 Sectors
+        const top100Companies = [
+            // 1. TECHNOLOGY
+            { rank: 1, ticker: "NVDA", name: "NVIDIA", mcap: 5427, price: 224.09, chg1D: 3.03, chg1W: 5.12, chg1M: 12.4, chgYTD: 42.1, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 2, ticker: "AAPL", name: "Apple", mcap: 4411, price: 302.25, chg1D: -0.87, chg1W: -1.20, chg1M: 3.10, chgYTD: 14.5, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 4, ticker: "MSFT", name: "Microsoft", mcap: 3656, price: 492.43, chg1D: -2.26, chg1W: -0.90, chg1M: 2.80, chgYTD: 18.2, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 6, ticker: "TSM", name: "TSMC", mcap: 2225, price: 429.15, chg1D: 1.68, chg1W: 4.20, chg1M: 9.80, chgYTD: 35.0, sector: "Technology", country: "Taiwan", region: "Asia", flag: "🇹🇼" },
+            { rank: 7, ticker: "AVGO", name: "Broadcom", mcap: 1979, price: 416.05, chg1D: -0.01, chg1W: 2.10, chg1M: 6.40, chgYTD: 28.4, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 12, ticker: "000660.KS", name: "SK Hynix", mcap: 812, price: 1144.00, chg1D: 7.64, chg1W: 10.2, chg1M: 18.5, chgYTD: 52.0, sector: "Technology", country: "South Korea", region: "Asia", flag: "🇰🇷" },
+            { rank: 14, ticker: "AMD", name: "AMD", mcap: 788, price: 482.93, chg1D: 1.82, chg1W: 3.40, chg1M: 8.90, chgYTD: 22.1, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 15, ticker: "ASML", name: "ASML Holding", mcap: 695, price: 1810.00, chg1D: 0.59, chg1W: -1.10, chg1M: 4.20, chgYTD: 16.8, sector: "Technology", country: "Netherlands", region: "Europe", flag: "🇳🇱" },
+            { rank: 19, ticker: "INTC", name: "Intel", mcap: 530, price: 100.95, chg1D: 3.32, chg1W: 6.10, chg1M: 14.2, chgYTD: 31.0, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 21, ticker: "CSCO", name: "Cisco Systems", mcap: 488, price: 123.88, chg1D: 2.86, chg1W: 1.80, chg1M: 5.10, chgYTD: 12.3, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 23, ticker: "ORCL", name: "Oracle", mcap: 441, price: 153.28, chg1D: 5.36, chg1W: 7.80, chg1M: 15.6, chgYTD: 44.2, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 24, ticker: "AMAT", name: "Applied Materials", mcap: 435, price: 548.15, chg1D: 4.29, chg1W: 5.90, chg1M: 11.2, chgYTD: 38.0, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 26, ticker: "PLTR", name: "Palantir", mcap: 411, price: 171.04, chg1D: -2.23, chg1W: 1.50, chg1M: 19.4, chgYTD: 68.0, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 27, ticker: "LRCX", name: "Lam Research", mcap: 408, price: 326.11, chg1D: 4.72, chg1W: 6.20, chg1M: 10.5, chgYTD: 33.1, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 37, ticker: "PANW", name: "Palo Alto Networks", mcap: 315, price: 387.01, chg1D: 0.84, chg1W: 2.30, chg1M: 4.80, chgYTD: 19.5, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 38, ticker: "DELL", name: "Dell Technologies", mcap: 313, price: 484.50, chg1D: 9.87, chg1W: 12.4, chg1M: 21.0, chgYTD: 54.2, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 41, ticker: "ARM", name: "Arm Holdings", mcap: 290, price: 271.87, chg1D: 1.09, chg1W: 3.50, chg1M: 7.20, chgYTD: 29.8, sector: "Technology", country: "United Kingdom", region: "Europe", flag: "🇬🇧" },
+            { rank: 52, ticker: "SAP", name: "SAP SE", mcap: 206, price: 220.50, chg1D: 1.25, chg1W: 0.80, chg1M: 3.90, chgYTD: 15.4, sector: "Technology", country: "Germany", region: "Europe", flag: "🇩🇪" },
+            { rank: 54, ticker: "ADI", name: "Analog Devices", mcap: 195, price: 245.80, chg1D: 0.65, chg1W: -0.40, chg1M: 2.10, chgYTD: 11.2, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 48, ticker: "KLAC", name: "KLA Corp", mcap: 252, price: 820.10, chg1D: 2.10, chg1W: 4.10, chg1M: 8.30, chgYTD: 27.5, sector: "Technology", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 2. COMMUNICATION SERVICES
+            { rank: 3, ticker: "GOOGL", name: "Alphabet (Google)", mcap: 4187, price: 342.37, chg1D: -0.18, chg1W: 1.40, chg1M: 6.20, chgYTD: 21.0, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 8, ticker: "META", name: "Meta Platforms", mcap: 1474, price: 578.85, chg1D: -3.38, chg1W: -2.10, chg1M: 5.80, chgYTD: 26.5, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 20, ticker: "TCEHY", name: "Tencent Holdings", mcap: 507, price: 56.28, chg1D: -5.44, chg1W: -3.20, chg1M: 2.10, chgYTD: 18.0, sector: "Communication Services", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 39, ticker: "NFLX", name: "Netflix", mcap: 309, price: 742.10, chg1D: 0.78, chg1W: 2.80, chg1M: 7.90, chgYTD: 33.2, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 50, ticker: "TMUS", name: "T-Mobile US", mcap: 208, price: 180.20, chg1D: 0.45, chg1W: 1.10, chg1M: 3.40, chgYTD: 14.8, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 53, ticker: "VZ", name: "Verizon", mcap: 196, price: 42.10, chg1D: -0.30, chg1W: -0.80, chg1M: 1.20, chgYTD: 6.5, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 62, ticker: "DIS", name: "Walt Disney", mcap: 185, price: 102.50, chg1D: 1.10, chg1W: 2.30, chg1M: -1.50, chgYTD: 8.2, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 70, ticker: "CMCSA", name: "Comcast", mcap: 160, price: 41.80, chg1D: -0.50, chg1W: -1.00, chg1M: 0.80, chgYTD: 4.1, sector: "Communication Services", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 3. CONSUMER CYCLICAL
+            { rank: 5, ticker: "AMZN", name: "Amazon", mcap: 2882, price: 267.28, chg1D: -1.83, chg1W: 0.50, chg1M: 7.10, chgYTD: 24.3, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 9, ticker: "TSLA", name: "Tesla", mcap: 1293, price: 327.51, chg1D: -1.59, chg1W: 3.20, chg1M: 14.8, chgYTD: 38.2, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 32, ticker: "HD", name: "Home Depot", mcap: 342, price: 343.43, chg1D: -3.12, chg1W: -2.50, chg1M: 1.90, chgYTD: 9.4, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 40, ticker: "BABA", name: "Alibaba", mcap: 300, price: 125.22, chg1D: 2.06, chg1W: -1.80, chg1M: 8.40, chgYTD: 22.0, sector: "Consumer Cyclical", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 44, ticker: "LVMH", name: "LVMH Moët Hennessy", mcap: 277, price: 710.00, chg1D: -1.20, chg1W: -0.50, chg1M: -3.20, chgYTD: 5.1, sector: "Consumer Cyclical", country: "France", region: "Europe", flag: "🇫🇷" },
+            { rank: 46, ticker: "TM", name: "Toyota Motor", mcap: 255, price: 185.30, chg1D: 0.80, chg1W: 1.40, chg1M: 2.90, chgYTD: 11.0, sector: "Consumer Cyclical", country: "Japan", region: "Asia", flag: "🇯🇵" },
+            { rank: 49, ticker: "MCD", name: "McDonald's", mcap: 214, price: 295.40, chg1D: 0.35, chg1W: 1.20, chg1M: 3.10, chgYTD: 7.8, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 75, ticker: "NKE", name: "Nike", mcap: 145, price: 96.20, chg1D: -0.90, chg1W: -1.80, chg1M: -2.40, chgYTD: 2.5, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 78, ticker: "LOW", name: "Lowe's", mcap: 135, price: 236.10, chg1D: -1.10, chg1W: -0.80, chg1M: 2.10, chgYTD: 8.0, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 85, ticker: "SBUX", name: "Starbucks", mcap: 112, price: 98.40, chg1D: 0.40, chg1W: 2.10, chg1M: 5.20, chgYTD: 13.1, sector: "Consumer Cyclical", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 4. HEALTHCARE
+            { rank: 11, ticker: "LLY", name: "Eli Lilly", mcap: 1087, price: 1220.00, chg1D: 0.43, chg1W: 2.80, chg1M: 8.90, chgYTD: 36.4, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 17, ticker: "JNJ", name: "Johnson & Johnson", mcap: 628, price: 260.86, chg1D: 0.41, chg1W: -0.20, chg1M: 1.80, chgYTD: 6.9, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 22, ticker: "ABBV", name: "AbbVie", mcap: 440, price: 248.76, chg1D: -0.53, chg1W: 0.90, chg1M: 4.30, chgYTD: 18.2, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 29, ticker: "UNH", name: "UnitedHealth Group", mcap: 364, price: 405.59, chg1D: 0.85, chg1W: 1.90, chg1M: 2.40, chgYTD: 10.1, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 30, ticker: "RO.SW", name: "Roche Holding", mcap: 363, price: 455.29, chg1D: -0.96, chg1W: -1.20, chg1M: 1.10, chgYTD: 8.5, sector: "Healthcare", country: "Switzerland", region: "Europe", flag: "🇨🇭" },
+            { rank: 35, ticker: "MRK", name: "Merck & Co", mcap: 328, price: 132.92, chg1D: 1.92, chg1W: 2.40, chg1M: 5.60, chgYTD: 14.8, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 42, ticker: "NVS", name: "Novartis", mcap: 290, price: 152.32, chg1D: 1.48, chg1W: 1.80, chg1M: 3.20, chgYTD: 12.3, sector: "Healthcare", country: "Switzerland", region: "Europe", flag: "🇨🇭" },
+            { rank: 51, ticker: "AZN", name: "AstraZeneca", mcap: 222, price: 74.80, chg1D: 0.60, chg1W: 0.40, chg1M: 2.80, chgYTD: 9.1, sector: "Healthcare", country: "United Kingdom", region: "Europe", flag: "🇬🇧" },
+            { rank: 55, ticker: "TMO", name: "Thermo Fisher", mcap: 210, price: 545.00, chg1D: 0.75, chg1W: 1.20, chg1M: 4.10, chgYTD: 11.8, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 68, ticker: "PFE", name: "Pfizer", mcap: 165, price: 29.10, chg1D: -0.20, chg1W: -0.50, chg1M: 0.90, chgYTD: 3.4, sector: "Healthcare", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 5. FINANCIAL
+            { rank: 10, ticker: "BRK-B", name: "Berkshire Hathaway", mcap: 1091, price: 510.00, chg1D: -1.24, chg1W: 0.40, chg1M: 3.50, chgYTD: 15.2, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 13, ticker: "JPM", name: "JPMorgan Chase", mcap: 971, price: 365.18, chg1D: 0.87, chg1W: 2.10, chg1M: 6.80, chgYTD: 22.4, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 16, ticker: "V", name: "Visa", mcap: 671, price: 359.42, chg1D: -0.94, chg1W: -0.30, chg1M: 2.40, chgYTD: 12.0, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 22, ticker: "MA", name: "Mastercard", mcap: 490, price: 559.73, chg1D: -0.30, chg1W: 0.20, chg1M: 3.10, chgYTD: 13.5, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 22, ticker: "BAC", name: "Bank of America", mcap: 453, price: 64.81, chg1D: 1.27, chg1W: 2.40, chg1M: 5.90, chgYTD: 19.8, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 28, ticker: "601939.SS", name: "China Construction Bank", mcap: 398, price: 1.52, chg1D: 0.20, chg1W: 0.80, chg1M: 2.10, chgYTD: 8.4, sector: "Financial", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 31, ticker: "HSBC", name: "HSBC Holdings", mcap: 358, price: 104.12, chg1D: 0.88, chg1W: 1.50, chg1M: 4.20, chgYTD: 14.2, sector: "Financial", country: "United Kingdom", region: "Europe", flag: "🇬🇧" },
+            { rank: 33, ticker: "MS", name: "Morgan Stanley", mcap: 342, price: 217.64, chg1D: 1.19, chg1W: 3.10, chg1M: 7.40, chgYTD: 25.0, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 34, ticker: "601288.SS", name: "Agricultural Bank of China", mcap: 338, price: 0.97, chg1D: 1.24, chg1W: 1.90, chg1M: 3.80, chgYTD: 11.2, sector: "Financial", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 36, ticker: "1398.HK", name: "ICBC", mcap: 326, price: 0.92, chg1D: 0.21, chg1W: 0.60, chg1M: 2.00, chgYTD: 9.0, sector: "Financial", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 43, ticker: "GS", name: "Goldman Sachs", mcap: 302, price: 1037.00, chg1D: 0.27, chg1W: 1.80, chg1M: 5.40, chgYTD: 21.3, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 45, ticker: "RY", name: "Royal Bank of Canada", mcap: 297, price: 213.48, chg1D: 1.53, chg1W: 2.10, chg1M: 4.80, chgYTD: 16.5, sector: "Financial", country: "Canada", region: "Americas", flag: "🇨🇦" },
+            { rank: 52, ticker: "WFC", name: "Wells Fargo", mcap: 243, price: 68.20, chg1D: 0.80, chg1W: 1.90, chg1M: 4.50, chgYTD: 18.0, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 58, ticker: "C", name: "Citigroup", mcap: 220, price: 74.50, chg1D: 0.95, chg1W: 2.30, chg1M: 5.10, chgYTD: 17.2, sector: "Financial", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 6. INDUSTRIALS
+            { rank: 25, ticker: "CAT", name: "Caterpillar", mcap: 393, price: 855.60, chg1D: 1.45, chg1W: 3.20, chg1M: 8.10, chgYTD: 27.4, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 27, ticker: "GE", name: "General Electric", mcap: 379, price: 365.33, chg1D: -0.74, chg1W: 1.10, chg1M: 6.80, chgYTD: 32.0, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 42, ticker: "RTX", name: "RTX Corporation", mcap: 300, price: 222.76, chg1D: 0.49, chg1W: 1.20, chg1M: 4.50, chgYTD: 18.6, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 60, ticker: "SIE", name: "Siemens AG", mcap: 217, price: 195.40, chg1D: 0.90, chg1W: 1.80, chg1M: 3.20, chgYTD: 13.9, sector: "Industrials", country: "Germany", region: "Europe", flag: "🇩🇪" },
+            { rank: 71, ticker: "UNP", name: "Union Pacific", mcap: 152, price: 248.10, chg1D: -0.40, chg1W: 0.20, chg1M: 2.10, chgYTD: 7.5, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 76, ticker: "HON", name: "Honeywell", mcap: 142, price: 215.30, chg1D: 0.30, chg1W: 0.90, chg1M: 2.80, chgYTD: 6.2, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 81, ticker: "LMT", name: "Lockheed Martin", mcap: 128, price: 540.20, chg1D: 1.05, chg1W: 2.40, chg1M: 5.10, chgYTD: 19.1, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 84, ticker: "DE", name: "Deere & Company", mcap: 115, price: 410.80, chg1D: 0.85, chg1W: 1.10, chg1M: 3.40, chgYTD: 8.9, sector: "Industrials", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 7. ENERGY
+            { rank: 7, ticker: "2222.SR", name: "Saudi Aramco", mcap: 1713, price: 7.09, chg1D: 0.00, chg1W: 0.50, chg1M: 1.20, chgYTD: 3.1, sector: "Energy", country: "Saudi Arabia", region: "Asia", flag: "🇸🇦" },
+            { rank: 18, ticker: "XOM", name: "Exxon Mobil", mcap: 657, price: 159.75, chg1D: -0.03, chg1W: 1.40, chg1M: 4.80, chgYTD: 16.2, sector: "Energy", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 26, ticker: "CVX", name: "Chevron", mcap: 386, price: 196.60, chg1D: -0.03, chg1W: 0.80, chg1M: 3.10, chgYTD: 11.4, sector: "Energy", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 36, ticker: "PTR", name: "PetroChina", mcap: 309, price: 0.95, chg1D: 0.40, chg1W: 1.10, chg1M: 2.90, chgYTD: 10.5, sector: "Energy", country: "China", region: "Asia", flag: "🇨🇳" },
+            { rank: 57, ticker: "SHEL", name: "Shell plc", mcap: 215, price: 68.40, chg1D: -0.25, chg1W: 0.40, chg1M: 2.10, chgYTD: 8.3, sector: "Energy", country: "United Kingdom", region: "Europe", flag: "🇬🇧" },
+            { rank: 69, ticker: "TTE", name: "TotalEnergies", mcap: 160, price: 65.10, chg1D: -0.10, chg1W: 0.30, chg1M: 1.80, chgYTD: 7.1, sector: "Energy", country: "France", region: "Europe", flag: "🇫🇷" },
+            { rank: 77, ticker: "COP", name: "ConocoPhillips", mcap: 138, price: 118.50, chg1D: 0.50, chg1W: 1.20, chg1M: 3.60, chgYTD: 12.0, sector: "Energy", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 8. CONSUMER DEFENSIVE
+            { rank: 11, ticker: "WMT", name: "Walmart", mcap: 923, price: 116.01, chg1D: 2.43, chg1W: 3.80, chg1M: 7.90, chgYTD: 28.5, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 25, ticker: "COST", name: "Costco Wholesale", mcap: 421, price: 949.58, chg1D: 0.56, chg1W: 1.90, chg1M: 5.20, chgYTD: 21.0, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 28, ticker: "KO", name: "Coca-Cola", mcap: 373, price: 86.71, chg1D: 0.27, chg1W: 0.90, chg1M: 2.40, chgYTD: 10.2, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 31, ticker: "PG", name: "Procter & Gamble", mcap: 336, price: 144.08, chg1D: -0.78, chg1W: -0.10, chg1M: 1.50, chgYTD: 8.1, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 41, ticker: "PM", name: "Philip Morris", mcap: 290, price: 186.19, chg1D: 0.02, chg1W: 0.80, chg1M: 4.10, chgYTD: 19.5, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 47, ticker: "NESN", name: "Nestle", mcap: 257, price: 95.80, chg1D: -0.30, chg1W: 0.20, chg1M: -0.80, chgYTD: 4.2, sector: "Consumer Defensive", country: "Switzerland", region: "Europe", flag: "🇨🇭" },
+            { rank: 53, ticker: "OR", name: "L'Oreal", mcap: 235, price: 430.00, chg1D: 0.20, chg1W: 0.70, chg1M: 2.10, chgYTD: 7.9, sector: "Consumer Defensive", country: "France", region: "Europe", flag: "🇫🇷" },
+            { rank: 56, ticker: "PEP", name: "PepsiCo", mcap: 212, price: 172.40, chg1D: -0.15, chg1W: 0.40, chg1M: 1.80, chgYTD: 5.6, sector: "Consumer Defensive", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 9. BASIC MATERIALS
+            { rank: 43, ticker: "BHP", name: "BHP Group", mcap: 285, price: 58.20, chg1D: 0.60, chg1W: 1.40, chg1M: 3.80, chgYTD: 11.2, sector: "Basic Materials", country: "Australia", region: "Asia", flag: "🇦🇺" },
+            { rank: 51, ticker: "RIO", name: "Rio Tinto", mcap: 240, price: 68.50, chg1D: -0.45, chg1W: 0.80, chg1M: 2.90, chgYTD: 9.4, sector: "Basic Materials", country: "Australia", region: "Asia", flag: "🇦🇺" },
+            { rank: 52, ticker: "LIN", name: "Linde plc", mcap: 236, price: 462.10, chg1D: 0.80, chg1W: 1.50, chg1M: 4.20, chgYTD: 14.8, sector: "Basic Materials", country: "United Kingdom", region: "Europe", flag: "🇬🇧" },
+            { rank: 88, ticker: "SHW", name: "Sherwin-Williams", mcap: 88, price: 345.20, chg1D: 0.30, chg1W: 0.90, chg1M: 3.10, chgYTD: 10.5, sector: "Basic Materials", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 90, ticker: "SCCO", name: "Southern Copper", mcap: 85, price: 110.40, chg1D: 1.10, chg1W: 2.80, chg1M: 6.90, chgYTD: 22.1, sector: "Basic Materials", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 10. UTILITIES
+            { rank: 37, ticker: "GEV", name: "GE Vernova", mcap: 308, price: 340.50, chg1D: 1.15, chg1W: 3.80, chg1M: 9.40, chgYTD: 38.5, sector: "Utilities", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 58, ticker: "NEE", name: "NextEra Energy", mcap: 199, price: 82.40, chg1D: 0.85, chg1W: 1.20, chg1M: 4.10, chgYTD: 16.2, sector: "Utilities", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 86, ticker: "SO", name: "Southern Company", mcap: 95, price: 88.30, chg1D: 0.40, chg1W: 0.80, chg1M: 2.50, chgYTD: 9.1, sector: "Utilities", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 87, ticker: "IBE", name: "Iberdrola", mcap: 92, price: 14.20, chg1D: 0.50, chg1W: 0.90, chg1M: 2.80, chgYTD: 11.0, sector: "Utilities", country: "Spain", region: "Europe", flag: "🇪🇸" },
+            { rank: 89, ticker: "DUK", name: "Duke Energy", mcap: 88, price: 112.50, chg1D: 0.25, chg1W: 0.60, chg1M: 2.10, chgYTD: 8.4, sector: "Utilities", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 92, ticker: "CEG", name: "Constellation Energy", mcap: 82, price: 260.10, chg1D: 2.30, chg1W: 4.90, chg1M: 11.2, chgYTD: 42.0, sector: "Utilities", country: "United States", region: "US", flag: "🇺🇸" },
+
+            // 11. REAL ESTATE
+            { rank: 82, ticker: "PLD", name: "Prologis", mcap: 122, price: 128.50, chg1D: 0.70, chg1W: 1.10, chg1M: 3.40, chgYTD: 9.8, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 86, ticker: "AMT", name: "American Tower", mcap: 105, price: 218.40, chg1D: -0.35, chg1W: 0.20, chg1M: 2.10, chgYTD: 6.4, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 88, ticker: "EQIX", name: "Equinix", mcap: 89, price: 890.00, chg1D: 1.20, chg1W: 2.10, chg1M: 5.60, chgYTD: 18.5, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 96, ticker: "SPG", name: "Simon Property", mcap: 62, price: 168.30, chg1D: -0.40, chg1W: 0.10, chg1M: 1.90, chgYTD: 7.2, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 97, ticker: "PSA", name: "Public Storage", mcap: 58, price: 325.10, chg1D: 0.15, chg1W: 0.50, chg1M: 2.00, chgYTD: 5.8, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 98, ticker: "O", name: "Realty Income", mcap: 54, price: 62.40, chg1D: 0.50, chg1W: 0.80, chg1M: 2.40, chgYTD: 8.1, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" },
+            { rank: 99, ticker: "CCI", name: "Crown Castle", mcap: 51, price: 114.20, chg1D: -0.20, chg1W: 0.30, chg1M: 1.50, chgYTD: 4.9, sector: "Real Estate", country: "United States", region: "US", flag: "🇺🇸" }
+        ];
+
+        // ===== เชื่อมต่อกับ Google Sheets (ทำหน้าที่เป็น "ฐานข้อมูล" แบบสเปรดชีต) =====
+        // ขั้นตอนตั้งค่า: ดูคำอธิบายทีละขั้นตอนในแชท แล้วนำ Web App URL ที่ได้
+        // จากการ Deploy Apps Script มาแทนที่ข้อความด้านล่างนี้
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywgg5VqEIy49_1rorDVrnJ-R9WYLovq5tXB0lynlemtxyVbZIPJ0et1XiOMGN89CAW/exec";
+
+        function sendRegistrationToSheet(payload) {
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+                console.warn("ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL — ข้อมูลการสมัครจะยังไม่ถูกบันทึกลง Google Sheets");
+                return;
+            }
+            // หมายเหตุ: ใช้ mode 'no-cors' เพราะ Google Apps Script Web App
+            // ไม่ส่ง CORS header กลับมาให้ฝั่งเบราว์เซอร์อ่าน response ได้โดยตรง
+            // ข้อมูลจะยังถูกส่งและบันทึกสำเร็จ เพียงแต่เราเช็คผลลัพธ์กลับไม่ได้
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).catch(err => console.error("ส่งข้อมูลไปยัง Google Sheets ไม่สำเร็จ:", err));
+        }
+
         function navigateTo(targetPage) {
+            hideStockTooltip();
             const homeView = document.getElementById('view-home');
+            const heatmapsView = document.getElementById('view-heatmaps');
+            const registerView = document.getElementById('view-register');
             const aboutView = document.getElementById('view-about');
-            const blankView = document.getElementById('view-blank');
-        const blankTitle = document.getElementById('blank-title');
 
-        if (targetPage === 'home') {
-            // ป้องกันการเลื่อนหน้าจอและตัดพื้นที่ว่างด้านล่างเฉพาะหน้าแรก
-            document.body.classList.add('overflow-hidden');
-            document.body.classList.remove('overflow-x-hidden');
+            const navHome = document.getElementById('nav-home');
+            const navHeatmaps = document.getElementById('nav-heatmaps');
+            const navAbout = document.getElementById('nav-about');
+            const navRegister = document.getElementById('nav-register');
 
-            // แสดงหน้า Home ซ่อนหน้าอื่นๆ ทั้งหมด
-            homeView.classList.remove('hidden');
-            homeView.classList.add('flex');
-                aboutView.classList.remove('flex');
-                aboutView.classList.add('hidden');
-            blankView.classList.remove('flex');
-            blankView.classList.add('hidden');
-        } else if (targetPage === 'about') {
-            // ปลดล็อกให้หน้าอื่นๆ สามารถเลื่อนขึ้นลงได้ตามปกติ
-            document.body.classList.remove('overflow-hidden');
-            document.body.classList.add('overflow-x-hidden');
+            [navHome, navHeatmaps, navAbout, navRegister].forEach(el => {
+                if(el) el.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400', 'pb-1');
+            });
 
-            // แสดงหน้า About โดยเฉพาะ
-            homeView.classList.remove('flex');
-            homeView.classList.add('hidden');
+            [homeView, heatmapsView, registerView, aboutView].forEach(el => {
+                if(el) {
+                    el.classList.remove('flex');
+                    el.classList.add('hidden');
+                }
+            });
+
+            if (targetPage === 'home') {
+                homeView.classList.remove('hidden');
+                homeView.classList.add('flex');
+                if(navHome) navHome.classList.add('text-blue-400', 'border-b-2', 'border-blue-400', 'pb-1');
+            } 
+            else if (targetPage === 'heatmaps') {
+                heatmapsView.classList.remove('hidden');
+                heatmapsView.classList.add('flex');
+                if(navHeatmaps) navHeatmaps.classList.add('text-blue-400', 'border-b-2', 'border-blue-400', 'pb-1');
+                renderTreemap();
+            }
+            else if (targetPage === 'register') {
+                registerView.classList.remove('hidden');
+                registerView.classList.add('flex');
+                if(navRegister) navRegister.classList.add('text-blue-400', 'border-b-2', 'border-blue-400', 'pb-1');
+            } 
+            else if (targetPage === 'about') {
                 aboutView.classList.remove('hidden');
                 aboutView.classList.add('flex');
-            blankView.classList.remove('flex');
-            blankView.classList.add('hidden');
-        } else {
-            // ปลดล็อกให้หน้าอื่นๆ สามารถเลื่อนขึ้นลงได้ตามปกติ
-            document.body.classList.remove('overflow-hidden');
-            document.body.classList.add('overflow-x-hidden');
-
-            // แสดงหน้า Blank สำหรับ Register หรืออื่นๆ
-            homeView.classList.remove('flex');
-            homeView.classList.add('hidden');
-                aboutView.classList.remove('flex');
-                aboutView.classList.add('hidden');
-                blankView.classList.remove('hidden');
-                blankView.classList.add('flex');
-
-                // เปลี่ยนชื่อหัวข้อตามปุ่มที่เลือกในหน้า Blank ทั่วไป
-                if (targetPage === 'register') {
-                    blankTitle.innerText = "Register";
-                } else if (targetPage === 'heatmaps') {
-                    blankTitle.innerText = "Heatmaps Center";
-                }
+                if(navAbout) navAbout.classList.add('text-blue-400', 'border-b-2', 'border-blue-400', 'pb-1');
             }
         }
+
+        /**
+         * Computes Squarified Treemap rectangles for hierarchical sector & stock visualization
+         * @param {Array} items - List of objects with market cap values
+         * @param {Number} x - Starting X coordinate
+         * @param {Number} y - Starting Y coordinate
+         * @param {Number} w - Available width
+         * @param {Number} h - Available height
+         */
+        function layoutSquarified(items, x, y, w, h) {
+            if (!items || items.length === 0 || w <= 0 || h <= 0) return [];
+
+            const totalValue = items.reduce((acc, item) => acc + item.value, 0);
+            if (totalValue <= 0) return [];
+
+            let results = [];
+            let currentX = x;
+            let currentY = y;
+            let currentW = w;
+            let currentH = h;
+
+            // Sort items descending by value
+            let sorted = [...items].sort((a, b) => b.value - a.value);
+
+            while (sorted.length > 0) {
+                const isHorizontal = currentW > currentH;
+                const sideLength = isHorizontal ? currentH : currentW;
+                
+                let row = [sorted.shift()];
+                let rowValue = row[0].value;
+
+                while (sorted.length > 0) {
+                    const nextItem = sorted[0];
+                    const newRowValue = rowValue + nextItem.value;
+                    
+                    // Check aspect ratio improvement
+                    const currentWorst = worstAspectRatio(row, rowValue, sideLength, currentW * currentH / totalValue);
+                    const newWorst = worstAspectRatio([...row, nextItem], newRowValue, sideLength, currentW * currentH / totalValue);
+
+                    if (newWorst <= currentWorst) {
+                        row.push(sorted.shift());
+                        rowValue = newRowValue;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Layout current row
+                const rowFraction = rowValue / totalValue;
+                const areaAllocated = rowFraction * (w * h);
+
+                if (isHorizontal) {
+                    const rowWidth = areaAllocated / currentH;
+                    let elemY = currentY;
+                    row.forEach(item => {
+                        const elemHeight = (item.value / rowValue) * currentH;
+                        results.push({
+                            data: item.data,
+                            x: currentX,
+                            y: elemY,
+                            w: rowWidth,
+                            h: elemHeight
+                        });
+                        elemY += elemHeight;
+                    });
+                    currentX += rowWidth;
+                    currentW -= rowWidth;
+                } else {
+                    const rowHeight = areaAllocated / currentW;
+                    let elemX = currentX;
+                    row.forEach(item => {
+                        const elemWidth = (item.value / rowValue) * currentW;
+                        results.push({
+                            data: item.data,
+                            x: elemX,
+                            y: currentY,
+                            w: elemWidth,
+                            h: rowHeight
+                        });
+                        elemX += elemWidth;
+                    });
+                    currentY += rowHeight;
+                    currentH -= rowHeight;
+                }
+            }
+
+            return results;
+        }
+
+        function worstAspectRatio(row, rowValue, sideLength, scaleFactor) {
+            if (rowValue === 0 || sideLength === 0) return Infinity;
+            const area = rowValue * scaleFactor;
+            const sideSq = sideLength * sideLength;
+            let maxVal = row[0].value;
+            let minVal = row[0].value;
+            row.forEach(item => {
+                if (item.value > maxVal) maxVal = item.value;
+                if (item.value < minVal) minVal = item.value;
+            });
+            const minArea = minVal * scaleFactor;
+            const maxArea = maxVal * scaleFactor;
+            return Math.max((sideSq * maxArea) / (area * area), (area * area) / (sideSq * minArea));
+        }
+
+        function getFilteredData() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const sector = document.getElementById('sectorFilter').value;
+            const region = document.getElementById('regionFilter').value;
+
+            return top100Companies.filter(c => {
+                const matchSearch = c.ticker.toLowerCase().includes(search) || c.name.toLowerCase().includes(search);
+                const matchSector = sector === 'ALL' || c.sector === sector;
+                const matchRegion = region === 'ALL' || c.region === region;
+                return matchSearch && matchSector && matchRegion;
+            });
+        }
+
+        function handleFilterChange() {
+            renderTreemap();
+        }
+
+        function resetHeatmapFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('sectorFilter').value = 'ALL';
+            document.getElementById('regionFilter').value = 'ALL';
+            document.getElementById('timeframeFilter').value = '1D';
+            renderTreemap();
+        }
+
+        function renderTreemap() {
+            const container = document.getElementById('heatmapContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            hideStockTooltip();
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            if (width === 0 || height === 0) return;
+
+            const filteredData = getFilteredData();
+            if (filteredData.length === 0) {
+                container.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 text-sm font-semibold">No companies match your search/filter criteria.</div>`;
+                return;
+            }
+
+            const timeframe = document.getElementById('timeframeFilter').value;
+
+            // Group companies by Sector
+            const sectorGroups = {};
+            filteredData.forEach(comp => {
+                if (!sectorGroups[comp.sector]) {
+                    sectorGroups[comp.sector] = [];
+                }
+                sectorGroups[comp.sector].push(comp);
+            });
+
+            // Level 1: Compute Sector Rectangles
+            const sectorItems = Object.keys(sectorGroups).map(sec => ({
+                data: sec,
+                value: sectorGroups[sec].reduce((acc, item) => acc + item.mcap, 0)
+            }));
+
+            const sectorLayout = layoutSquarified(sectorItems, 0, 0, width, height);
+
+            // Level 2: Render each Sector container & child company tiles
+            sectorLayout.forEach(secRect => {
+                const sectorName = secRect.data;
+                const companies = sectorGroups[sectorName];
+
+                // Create Sector Group Box
+                const secElem = document.createElement('div');
+                secElem.style.position = 'absolute';
+                secElem.style.left = secRect.x + 'px';
+                secElem.style.top = secRect.y + 'px';
+                secElem.style.width = secRect.w + 'px';
+                secElem.style.height = secRect.h + 'px';
+                secElem.className = 'border border-slate-900/90 overflow-hidden box-border bg-slate-950/40';
+
+                // Sector Header Label if box is large enough
+                const headerHeight = secRect.h > 45 && secRect.w > 65 ? 18 : 0;
+                if (headerHeight > 0) {
+                    const header = document.createElement('div');
+                    header.className = 'bg-slate-900/90 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-cyan-300 truncate border-b border-slate-800/80';
+                    header.innerText = sectorName;
+                    secElem.appendChild(header);
+                }
+
+                // Compute inner Treemap for companies inside this sector
+                const innerItems = companies.map(c => ({ data: c, value: c.mcap }));
+                const companyLayout = layoutSquarified(innerItems, 0, headerHeight, secRect.w, secRect.h - headerHeight);
+
+                companyLayout.forEach(tileRect => {
+                    const comp = tileRect.data;
+                    const tile = document.createElement('div');
+                    tile.style.position = 'absolute';
+                    tile.style.left = tileRect.x + 'px';
+                    tile.style.top = tileRect.y + 'px';
+                    tile.style.width = tileRect.w + 'px';
+                    tile.style.height = tileRect.h + 'px';
+
+                    // Determine performance metric based on timeframe
+                    let chgVal = comp.chg1D;
+                    if (timeframe === '1W') chgVal = comp.chg1W;
+                    else if (timeframe === '1M') chgVal = comp.chg1M;
+                    else if (timeframe === 'YTD') chgVal = comp.chgYTD;
+
+                    // Assign color class based on performance
+                    let colorClass = 'bg-stock-neutral';
+                    if (chgVal >= 3.0) colorClass = 'bg-stock-up-extreme';
+                    else if (chgVal >= 1.0) colorClass = 'bg-stock-up-mid';
+                    else if (chgVal > 0.0) colorClass = 'bg-stock-up-light';
+                    else if (chgVal <= -3.0) colorClass = 'bg-stock-down-extreme';
+                    else if (chgVal <= -1.0) colorClass = 'bg-stock-down-mid';
+                    else if (chgVal < 0.0) colorClass = 'bg-stock-down-light';
+
+                    tile.className = `treemap-tile ${colorClass} p-1 flex flex-col justify-between overflow-hidden select-none`;
+                    tile.onclick = () => openStockModal(comp);
+                    tile.onmouseenter = (e) => showStockTooltip(e, comp, chgVal, timeframe);
+                    tile.onmousemove = (e) => positionStockTooltip(e);
+                    tile.onmouseleave = hideStockTooltip;
+
+                    // Scaled display based on block dimensions
+                    const formattedMcap = comp.mcap >= 1000 ? `$${(comp.mcap / 1000).toFixed(2)}T` : `$${comp.mcap}B`;
+                    const formattedChg = (chgVal >= 0 ? '+' : '') + chgVal.toFixed(2) + '%';
+
+                    if (tileRect.w > 70 && tileRect.h > 45) {
+                        tile.innerHTML = `
+                            <div class="flex items-center justify-between w-full">
+                                <span class="font-black font-mono text-xs md:text-sm tracking-tight leading-none drop-shadow">${comp.ticker}</span>
+                                <span class="text-[10px] opacity-80">${comp.flag}</span>
+                            </div>
+                            <div class="text-[10px] font-bold font-mono leading-none my-0.5 opacity-90 truncate">${comp.name}</div>
+                            <div class="flex items-end justify-between w-full text-[10px] font-mono">
+                                <span class="font-extrabold drop-shadow">${formattedChg}</span>
+                                <span class="opacity-75 text-[9px]">${formattedMcap}</span>
+                            </div>
+                        `;
+                    } else if (tileRect.w > 45 && tileRect.h > 30) {
+                        tile.innerHTML = `
+                            <div class="font-extrabold font-mono text-[11px] leading-none drop-shadow">${comp.ticker}</div>
+                            <div class="text-[10px] font-bold font-mono leading-none drop-shadow">${formattedChg}</div>
+                        `;
+                    } else if (tileRect.w > 25 && tileRect.h > 18) {
+                        tile.innerHTML = `
+                            <div class="font-bold font-mono text-[9px] leading-none truncate">${comp.ticker}</div>
+                        `;
+                    } else {
+                        tile.title = `${comp.name} (${comp.ticker}): ${formattedChg} (${formattedMcap})`;
+                    }
+
+                    secElem.appendChild(tile);
+                });
+
+                container.appendChild(secElem);
+            });
+        }
+
+        function openStockModal(comp) {
+            hideStockTooltip();
+            document.getElementById('mFlag').innerText = comp.flag;
+            document.getElementById('mTicker').innerText = comp.ticker;
+            document.getElementById('mRank').innerText = `#${comp.rank} Global`;
+            document.getElementById('mName').innerText = comp.name;
+            
+            const formattedMcap = comp.mcap >= 1000 ? `$${(comp.mcap / 1000).toFixed(3)} Trillion` : `$${comp.mcap} Billion`;
+            document.getElementById('mMarketCap').innerText = formattedMcap;
+            document.getElementById('mPrice').innerText = `$${comp.price.toFixed(2)}`;
+
+            const chgElem1D = document.getElementById('mChange1D');
+            chgElem1D.innerText = (comp.chg1D >= 0 ? '+' : '') + comp.chg1D.toFixed(2) + '%';
+            chgElem1D.className = comp.chg1D >= 0 ? 'text-sm font-bold font-mono text-emerald-400' : 'text-sm font-bold font-mono text-rose-400';
+
+            const chgElem1M = document.getElementById('mChange1M');
+            chgElem1M.innerText = (comp.chg1M >= 0 ? '+' : '') + comp.chg1M.toFixed(2) + '%';
+            chgElem1M.className = comp.chg1M >= 0 ? 'text-sm font-bold font-mono text-emerald-400' : 'text-sm font-bold font-mono text-rose-400';
+
+            document.getElementById('mSector').innerText = comp.sector;
+            document.getElementById('mCountry').innerText = comp.country;
+
+            // Generate synthetic SVG trend line based on performance
+            const svgChart = document.getElementById('mChartSvg');
+            const isPositive = comp.chg1D >= 0;
+            svgChart.setAttribute('class', `w-full h-full fill-none ${isPositive ? 'stroke-emerald-400' : 'stroke-rose-400'}`);
+            
+            const startY = isPositive ? 45 : 15;
+            const midY = isPositive ? 30 : 35;
+            const endY = isPositive ? 10 : 50;
+            svgChart.querySelector('path').setAttribute('d', `M0,${startY} Q75,${midY} 150,${startY - 10} T300,${endY}`);
+
+            document.getElementById('stockModal').classList.remove('hidden');
+        }
+
+        function closeStockModal() {
+            document.getElementById('stockModal').classList.add('hidden');
+        }
+
+        // ป้ายข้อมูลย่อเมื่อเลื่อนเมาส์ผ่านกล่องหุ้น (Hover Tooltip)
+        const timeframeLabels = { '1D': '24h Change', '1W': '1W Change', '1M': '1M Change', 'YTD': 'YTD Change' };
+
+        function showStockTooltip(event, comp, chgVal, timeframe) {
+            document.getElementById('ttTicker').innerText = comp.ticker;
+            document.getElementById('ttFlag').innerText = comp.flag;
+            document.getElementById('ttName').innerText = comp.name;
+            document.getElementById('ttPrice').innerText = `$${comp.price.toFixed(2)}`;
+
+            const chgElem = document.getElementById('ttChange');
+            chgElem.innerText = (chgVal >= 0 ? '+' : '') + chgVal.toFixed(2) + '%';
+            chgElem.className = chgVal >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+            document.getElementById('ttMcap').innerText = comp.mcap >= 1000 ? `$${(comp.mcap / 1000).toFixed(2)}T` : `$${comp.mcap}B`;
+            document.getElementById('ttTimeframe').innerText = timeframeLabels[timeframe] || 'Change';
+
+            document.getElementById('stockTooltip').classList.remove('hidden');
+            positionStockTooltip(event);
+        }
+
+        function positionStockTooltip(event) {
+            const tooltip = document.getElementById('stockTooltip');
+            const offset = 16;
+            const tooltipWidth = tooltip.offsetWidth || 224;
+            const tooltipHeight = tooltip.offsetHeight || 110;
+
+            let left = event.clientX + offset;
+            let top = event.clientY + offset;
+
+            if (left + tooltipWidth > window.innerWidth - 8) {
+                left = event.clientX - tooltipWidth - offset;
+            }
+            if (top + tooltipHeight > window.innerHeight - 8) {
+                top = event.clientY - tooltipHeight - offset;
+            }
+
+            tooltip.style.left = `${Math.max(8, left)}px`;
+            tooltip.style.top = `${Math.max(8, top)}px`;
+        }
+
+        function hideStockTooltip() {
+            document.getElementById('stockTooltip').classList.add('hidden');
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('password');
+            const toggleBtnText = document.getElementById('togglePassText');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                toggleBtnText.innerText = 'ซ่อน';
+            } else {
+                passInput.type = 'password';
+                toggleBtnText.innerText = 'แสดง';
+            }
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const age = document.getElementById('age').value;
+            const birthdate = document.getElementById('birthdate').value;
+            const phone = document.getElementById('phoneNumber').value.trim();
+
+            const randomId = 'ISC-' + Math.floor(10000 + Math.random() * 90000);
+
+            // ส่งข้อมูลสมาชิกใหม่ไปบันทึกที่ Google Sheets
+            // (ไม่ส่งรหัสผ่านไปด้วย เพราะสเปรดชีตไม่ใช่ที่ปลอดภัยสำหรับเก็บรหัสผ่าน)
+            sendRegistrationToSheet({
+                timestamp: new Date().toISOString(),
+                memberId: randomId,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                phone: phone,
+                age: age,
+                birthdate: birthdate
+            });
+
+            document.getElementById('resMemberId').innerText = '#' + randomId;
+            document.getElementById('resFullName').innerText = firstName + ' ' + lastName;
+            document.getElementById('resEmail').innerText = email;
+            document.getElementById('resPhone').innerText = phone;
+            
+            const formattedDate = birthdate ? new Date(birthdate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+            document.getElementById('resAgeBirth').innerText = `${age} ปี (${formattedDate})`;
+
+            document.getElementById('register-form-card').classList.add('hidden');
+            document.getElementById('register-success-card').classList.remove('hidden');
+        }
+
+        function resetRegisterForm() {
+            document.getElementById('registerForm').reset();
+            document.getElementById('register-success-card').classList.add('hidden');
+            document.getElementById('register-form-card').classList.remove('hidden');
+        }
+
+        // Window resize event handler for dynamic re-layout of heatmap
+        window.addEventListener('resize', () => {
+            const heatmapsView = document.getElementById('view-heatmaps');
+            if (heatmapsView && !heatmapsView.classList.contains('hidden')) {
+                renderTreemap();
+            }
+        });
     </script>
 
 </body>
