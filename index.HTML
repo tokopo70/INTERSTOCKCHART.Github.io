@@ -84,6 +84,11 @@
         .bg-stock-down-light { background: linear-gradient(135deg, #f98080 0%, #e02424 100%); color: #3b0707; }
         .bg-stock-down-mid { background: linear-gradient(135deg, #e02424 0%, #9b1c1c 100%); color: #ffffff; }
         .bg-stock-down-extreme { background: linear-gradient(135deg, #9b1c1c 0%, #771d1d 100%); color: #ffffff; }
+
+        /* Registration status banner (new) */
+        #regStatusBanner {
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body class="relative min-h-screen text-white overflow-x-hidden flex flex-col justify-between bg-[#030d1a]">
@@ -266,7 +271,10 @@
 
         <!-- ================= หน้าที่ 3: REGISTER PAGE ================= -->
         <div id="view-register" class="hidden flex-col items-center justify-center px-4 py-6 max-w-2xl mx-auto w-full transition-all duration-300">
-            
+
+            <!-- Status banner: shows sending / success / error state for the Google Sheets submission -->
+            <div id="regStatusBanner" class="hidden w-full mb-4 px-4 py-3 rounded-xl text-xs font-semibold text-center border"></div>
+
             <div id="register-form-card" class="w-full bg-gradient-to-b from-blue-950/70 to-slate-950/80 border border-blue-500/30 rounded-3xl p-6 md:p-10 backdrop-blur-md glow-card">
                 <div class="text-center mb-8">
                     <span class="px-4 py-1 bg-blue-900/40 border border-blue-400/30 rounded-full text-xs font-bold tracking-widest text-blue-400 uppercase">
@@ -352,7 +360,7 @@
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-base tracking-wider rounded-xl shadow-lg shadow-blue-500/30 transition duration-300 transform active:scale-[0.98] uppercase">
+                        <button type="submit" id="submitRegisterBtn" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-base tracking-wider rounded-xl shadow-lg shadow-blue-500/30 transition duration-300 transform active:scale-[0.98] uppercase disabled:opacity-50 disabled:cursor-not-allowed">
                             Submit Registration
                         </button>
                     </div>
@@ -771,24 +779,26 @@
         ];
 
         // ===== เชื่อมต่อกับ Google Sheets (ทำหน้าที่เป็น "ฐานข้อมูล" แบบสเปรดชีต) =====
-        // ขั้นตอนตั้งค่า: ดูคำอธิบายทีละขั้นตอนในแชท แล้วนำ Web App URL ที่ได้
-        // จากการ Deploy Apps Script มาแทนที่ข้อความด้านล่างนี้
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywgg5VqEIy49_1rorDVrnJ-R9WYLovq5tXB0lynlemtxyVbZIPJ0et1XiOMGN89CAW/exec";
+        // ขั้นตอนตั้งค่า: สร้าง Google Sheet ใหม่ -> Extensions > Apps Script -> วางโค้ด doPost()
+        // (ดูตัวอย่างโค้ด Apps Script ที่ให้ไว้แยกต่างหาก) -> Deploy as Web App (Anyone) ->
+        // นำ URL ที่ได้มาแทนที่ค่าด้านล่างนี้
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2ZVgHtLeU1j1mdqgvUZN17p1SsToZE5u_3bq13IUruYS1oOPDYuRo3fTYFRMMoMwW/exec";
 
+        // ส่งข้อมูลการสมัครสมาชิกไปยัง Google Apps Script (คืนค่า Promise เพื่อให้รอผลได้)
         function sendRegistrationToSheet(payload) {
             if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
                 console.warn("ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL — ข้อมูลการสมัครจะยังไม่ถูกบันทึกลง Google Sheets");
-                return;
+                return Promise.reject(new Error("GOOGLE_SCRIPT_URL not configured"));
             }
             // หมายเหตุ: ใช้ mode 'no-cors' เพราะ Google Apps Script Web App
             // ไม่ส่ง CORS header กลับมาให้ฝั่งเบราว์เซอร์อ่าน response ได้โดยตรง
-            // ข้อมูลจะยังถูกส่งและบันทึกสำเร็จ เพียงแต่เราเช็คผลลัพธ์กลับไม่ได้
-            fetch(GOOGLE_SCRIPT_URL, {
+            // ข้อมูลจะยังถูกส่งและบันทึกสำเร็จ เพียงแต่เราเช็คผลลัพธ์กลับไม่ได้ (response แบบ opaque)
+            return fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
-            }).catch(err => console.error("ส่งข้อมูลไปยัง Google Sheets ไม่สำเร็จ:", err));
+            });
         }
 
         function navigateTo(targetPage) {
@@ -1189,7 +1199,24 @@
             }
         }
 
-        function handleRegister(event) {
+        // แสดง/ซ่อน แถบสถานะระหว่างส่งข้อมูลสมัครสมาชิก
+        function showRegStatus(kind, message) {
+            const banner = document.getElementById('regStatusBanner');
+            banner.classList.remove('hidden', 'bg-blue-950/60', 'border-blue-500/40', 'text-blue-300',
+                'bg-rose-950/60', 'border-rose-500/40', 'text-rose-300');
+            if (kind === 'sending') {
+                banner.classList.add('bg-blue-950/60', 'border-blue-500/40', 'text-blue-300');
+            } else if (kind === 'error') {
+                banner.classList.add('bg-rose-950/60', 'border-rose-500/40', 'text-rose-300');
+            }
+            banner.innerText = message;
+        }
+
+        function hideRegStatus() {
+            document.getElementById('regStatusBanner').classList.add('hidden');
+        }
+
+        async function handleRegister(event) {
             event.preventDefault();
 
             const firstName = document.getElementById('firstName').value.trim();
@@ -1200,36 +1227,52 @@
             const phone = document.getElementById('phoneNumber').value.trim();
 
             const randomId = 'ISC-' + Math.floor(10000 + Math.random() * 90000);
+            const submitBtn = document.getElementById('submitRegisterBtn');
 
-            // ส่งข้อมูลสมาชิกใหม่ไปบันทึกที่ Google Sheets
-            // (ไม่ส่งรหัสผ่านไปด้วย เพราะสเปรดชีตไม่ใช่ที่ปลอดภัยสำหรับเก็บรหัสผ่าน)
-            sendRegistrationToSheet({
-                timestamp: new Date().toISOString(),
-                memberId: randomId,
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-                phone: phone,
-                age: age,
-                birthdate: birthdate
-            });
+            // ปิดปุ่ม + แสดงสถานะ "กำลังส่งข้อมูล" ระหว่างรอ Google Sheets
+            submitBtn.disabled = true;
+            showRegStatus('sending', 'กำลังบันทึกข้อมูลลง Google Sheets...');
 
-            document.getElementById('resMemberId').innerText = '#' + randomId;
-            document.getElementById('resFullName').innerText = firstName + ' ' + lastName;
-            document.getElementById('resEmail').innerText = email;
-            document.getElementById('resPhone').innerText = phone;
-            
-            const formattedDate = birthdate ? new Date(birthdate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
-            document.getElementById('resAgeBirth').innerText = `${age} ปี (${formattedDate})`;
+            try {
+                // ส่งข้อมูลสมาชิกใหม่ไปบันทึกที่ Google Sheets
+                // (ไม่ส่งรหัสผ่านไปด้วย เพราะสเปรดชีตไม่ใช่ที่ปลอดภัยสำหรับเก็บรหัสผ่าน)
+                await sendRegistrationToSheet({
+                    timestamp: new Date().toISOString(),
+                    memberId: randomId,
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    phone: phone,
+                    age: age,
+                    birthdate: birthdate
+                });
 
-            document.getElementById('register-form-card').classList.add('hidden');
-            document.getElementById('register-success-card').classList.remove('hidden');
+                hideRegStatus();
+
+                document.getElementById('resMemberId').innerText = '#' + randomId;
+                document.getElementById('resFullName').innerText = firstName + ' ' + lastName;
+                document.getElementById('resEmail').innerText = email;
+                document.getElementById('resPhone').innerText = phone;
+
+                const formattedDate = birthdate ? new Date(birthdate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+                document.getElementById('resAgeBirth').innerText = `${age} ปี (${formattedDate})`;
+
+                document.getElementById('register-form-card').classList.add('hidden');
+                document.getElementById('register-success-card').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("ส่งข้อมูลไปยัง Google Sheets ไม่สำเร็จ:", err);
+                showRegStatus('error', 'ไม่สามารถเชื่อมต่อกับระบบบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ');
+            } finally {
+                submitBtn.disabled = false;
+            }
         }
 
         function resetRegisterForm() {
             document.getElementById('registerForm').reset();
             document.getElementById('register-success-card').classList.add('hidden');
             document.getElementById('register-form-card').classList.remove('hidden');
+            hideRegStatus();
         }
 
         // Window resize event handler for dynamic re-layout of heatmap
